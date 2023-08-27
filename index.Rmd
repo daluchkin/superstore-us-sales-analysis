@@ -1,0 +1,2711 @@
+---
+title: "Superstore Sales Analysis (EDA)"
+output:
+  html_document:
+    code_download: true
+    toc: TRUE
+    toc_depth: 4
+    number_sections: false  
+    theme: united  
+    highlight: pygments
+    self_contained: no
+      
+---
+
+```{css, echo=FALSE}
+.grid-container {
+  display: grid;
+  gap: 15px;
+  grid-template-columns: auto auto auto;
+}
+
+.grid-item {
+  border: 1px solid lightgray;
+  padding: 15px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.grid-container--fit {
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.parent {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-rows: 40px repeat(2, 1fr);
+    grid-column-gap: 0px;
+    grid-row-gap: 15px;
+}
+
+.div_0 { grid-area: 1 / 1 / 2 / 5; text-align: right;}
+.div_top_left { grid-area: 2 / 1 / 3 / 3; }
+.div_top_right { grid-area: 2 / 3 / 3 / 5; text-align: right;}
+.div_bottom_left { grid-area: 3 / 1 / 4 / 3; }
+.div_bottom_right { grid-area: 3 / 3 / 4 / 5; text-align: right;}
+
+```
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(out.width = "100%", echo = TRUE, message=FALSE, warning=FALSE, results='markup', tidy=TRUE,
+                      tidy.opts=list(arrow=TRUE, indent=2, width.cutoff=75))
+
+```
+
+# Introduction
+
+The dataset contains sales, profit, shipping and geographical information, categories and sub-categories of sold products.
+
+# Objectives
+
+1.  Understand the data, structure and data types.
+2.  Clean data.
+3.  Transform data for analysis.
+4.  Answer the following questions:
+
+    + General Metrics:
+        + What is the gross sales revenue?
+        + What is the total profit?
+        + What is average basket size and value?
+        + What is Customer Lifetime Value (CTV)?
+        + What are number of total and new customers?
+        + What are total and loss orders?
+    
+    + Sales & Profit:
+        + What is total gross revenue and YoY growth rate of its?
+        + What is total profit and YoY growth rate of its?
+        + Which are Sales and average Price quarterly by segment?
+        + What is average order value by month?
+        + What is average order value by week?
+        + What is average order value by date?
+        + What is average order value by day of week?
+    
+    + Category:
+        + Which Category are best selling and most profitable?
+        + What is YoY Sales and Profit Growth by Category?
+    
+    + Orders:
+        + What are total and loss orders and YoY Growth of its?
+
+    + Sub-Category:
+        + Which Sub-Category are best selling and most profitable/lossable?
+        + What is YoY Sales and Profit Growth by Sub-Category?
+        + Which sub-categories do customers prefer to buy together at the same time?
+
+    + Basket:
+        + What is average basket size and value?
+        + What are YoY basket value Growth and basket size by Customer Segment?
+
+    + Customer Lifetime Value:
+        + What is Customer Lifetime Value (CTV)?
+        + What is YoY CTV Growth?
+
+    + Customer:
+        + What are number of total and new customers? 
+        + What are YoY total and new customers growth?
+        + Who are the top profitable customers?
+        + What is percentage of Revenue from new business?
+
+    + Product:
+        + What are top profitable products?
+
+    + Region/State/City:
+        + Which city/region/state is the best selling and most profitable?
+        + What are YoY Sales and Profit growth by Region?
+        + What is YoY loss Orders Growth by Region?
+        + What are top/bottom profitable Cities?
+        + What are top/bottom profitable States?
+
+    + Ship Mode:
+        + Which is the preferred ship mode?
+
+    + Customer Segment:
+        + What are sizes of Customer Segments?
+        + What are YoY Growth Sales and Profit by Customer Segment?
+
+    + Correlation:
+        + How Sales affect Profit?
+        + How discount affects sales and profit?
+
+# Dataset
+
+Dataset is located in Kaggle and named as [Superstore Dataset](https://www.kaggle.com/datasets/vivek468/superstore-dataset-final).
+
+# Metadata
+
+| Variable name | Description                              |
+|:--------------|:-----------------------------------------|
+| Row ID        | Unique ID for each row.                  |
+| Order ID      | Unique Order ID for each Customer.       |
+| Order Date    | Order Date of the product.               |
+| Ship Date     | Shipping Date of the Product.            |
+| Ship Mode     | Shipping Mode specified by the Customer. |
+| Customer ID   | Unique ID to identify each Customer.     |
+| Customer Name | Name of the Customer.                    |
+| Segment       | The segment where the Customer belongs.  |
+| City          | City of residence of of the Customer.    |
+| State         | State of residence of the Customer.      |
+| Country       | Country of residence of the Customer.    |
+| Postal Code   | Postal Code of every Customer.           |
+| Region        | Region where the Customer belong.        |
+| Product ID    | Unique ID of the Product.                |
+| Category      | Category of the product ordered.         |
+| Sub-Category  | Sub-Category of the product ordered.     |
+| Product Name  | Name of the Product                      |
+| Sales         | Sales of the Product.                    |
+| Quantity      | Quantity of the Product.                 |
+| Discount      | Discount provided.                       |
+| Profit        | Profit/Loss incurred.                    |
+
+# Preparation
+
+All the required libraries have to be installed.
+
+```{r loading-library}
+
+# loading required libraries
+
+library(dplyr)
+library(tidyverse)
+library(kableExtra)
+
+```
+
+```{r theme-setup}
+
+# setup plots theme
+theme_set(theme_light())
+theme_update(axis.title = element_text(face = "bold"), 
+             plot.title = element_text(face = "bold"),
+             panel.grid.major = element_line(color = "darkgray", linetype = "dotted"),
+             panel.grid.minor = element_blank(),
+             panel.background = element_blank(),
+             panel.border= element_rect(color="darkgray"),
+             plot.margin = unit(c(.5, 1, 1, 1), "lines"))
+
+```
+
+
+# Data Loading
+
+```{r loading-data}
+
+# Loading data
+Orders <- read_csv("./data/Sample - Superstore.csv")
+
+# KAGGLE
+#Orders <- read_csv("/kaggle/input/superstore-dataset-final/Sample - Superstore.csv")
+
+# Column names
+colnames(Orders)
+# Dimention
+size_sum(Orders)
+
+```
+
+```{r data-structure, error=TRUE}
+
+
+# Structure => This code will appear error on Kaggle!
+glimpse(Orders)
+
+```
+
+Check character columns whether all columns have an valid UTF-8 encoding which could affect R functions proceeding.
+
+```{r check_characters}
+
+# get all columns that have an invalid UTF-8 encoding
+invalid_cols <- Orders %>%
+  select_if(is.character) %>%
+  summarise_all(~sum(!validUTF8(.))) %>%
+  select_if(~. > 0); invalid_cols
+
+```
+
+**Product Name** and **Customer Name** have invalid UTF-8 encoding that would affect negatively on plotting the variables and output some R functions on Kaggle.
+
+```{r customer-name-encoding}
+
+# Customer Name
+invalid_customer_name <- Orders %>%
+  select(`Customer Name`) %>%
+  filter(!validUTF8(`Customer Name`)) %>%
+  distinct(); invalid_customer_name
+
+```
+
+```{r ascii-transform-customer-name}
+
+invalid_customer_name %>%
+  mutate(ascii = stringi::stri_trans_general(`Customer Name`, "Latin-ASCII"))
+
+```
+
+All strings in R could be only in three encodings - UTF-8 , Latin1 and native.
+Let's try **latin1**.
+
+```{r encoding-customer-name}
+
+Encoding(invalid_customer_name$`Customer Name`) <- "latin1"
+invalid_customer_name$`Customer Name`
+
+# apply this approach to the whole Customer Name column
+Encoding(Orders$`Customer Name`) <- "latin1"
+
+```
+
+Check **Product Name**.
+
+```{r product-name-check}
+
+# Product Name
+invalid_product_name <- Orders %>%
+  select(`Product Name`) %>%
+  filter(!validUTF8(`Product Name`)) %>%
+  distinct(); invalid_product_name
+
+```
+
+```{r try-type-convert}
+type_convert(Orders %>%
+  select(`Product Name`) %>%
+  filter(!validUTF8(`Product Name`)) %>%
+  distinct(), locale = readr::locale(encoding = "latin1")) %>%
+  mutate(`Product Name` = iconv(`Product Name`,"utf-8", "latin1", sub=" "))
+
+```
+
+Change encoding for the whole **Product Name** column.
+
+```{r encoding-product-name}
+
+Encoding(Orders$`Product Name`) <- "latin1"
+
+```
+
+```{r data-structure-2}
+
+# Structure
+glimpse(Orders)
+  
+```
+
+# Data Cleansing
+
+## Missing Data
+
+```{r missing-data-1}
+
+# missing values
+missing_values <- lapply(Orders, function(x) sum(is.na(x) | x %in% c("", "NA")))
+missing_values[missing_values > 0]
+
+```
+
+There are no NA data in the table.
+
+## Duplicated Data
+
+```{r duplicate-data}
+
+# Duplicate data
+Orders %>%
+  group_by_all() %>%
+  filter(n() > 1) %>%
+  ungroup()
+
+```
+
+There are NO duplicates, but...
+
+A number of rows is **9994**. Let's remove useless variable **Row ID** and check duplicates again.
+
+```{r remove-duplicates, paged.print=TRUE}
+
+# Number of full duplicates
+sum(Orders %>% select(-`Row ID`) %>% duplicated())
+
+# All duplicates
+Orders %>% 
+  select(-`Row ID`) %>%
+  group_by_all() %>%
+  filter(n() > 1) %>%
+  ungroup()
+
+# keep unique rows only
+Orders <- Orders %>% select(-`Row ID`) %>% unique()
+
+# check structure and dimension
+glimpse(Orders)
+
+```
+
+Now it's **9993**, so one duplicate was removed.
+
+# Data Transformation
+
+Let's look at the all character variables and their unique values.
+
+```{r number-unique-values}
+ 
+# Number of unique values in each column
+uni_count <- as.data.frame(sapply(Orders %>% select_if(is.character), 
+                                  function(x) length(unique(x)), simplify = T))
+uni_count <- rownames_to_column(uni_count, var="s")
+colnames(uni_count) <- c("Variable Name", "# of Unique Values")
+
+```
+
+```{r print-uni-count, paged.print=TRUE, rows.print=nrow(uni_count)}
+
+# Print variables
+knitr::knit_print(uni_count)
+
+```
+
+These variables **Ship Mode**, **Segment**, **Country**, **City**, **State**, **Region**, **Category**, **Sub-Category** have to be a *Factor* data type, and **Order Date**, **Ship Date** as *Date* data type.
+
+```{r convert-data-type}
+
+factor_columns <- c("Ship Mode", "Segment", "Country", "City", 
+                    "State", "Region", "Category", "Sub-Category")
+date_columns <- c("Order Date", "Ship Date")
+
+# make factors and format date variables.
+Orders <- Orders %>%
+  mutate_at(factor_columns, as.factor) %>%
+  mutate_at(date_columns, ~as.Date(., format="%m/%d/%Y"))
+
+# make Quantity as Integer
+Orders <- Orders %>%
+  mutate(Quantity = as.integer(Quantity))
+
+# check structure
+glimpse(Orders)
+
+```
+
+Double check the missing values.
+
+```{r missing-data-3}
+
+missing_values <- lapply(Orders, 
+                         function(x) sum(is.na(x) | x %in% c("", "NA")))
+missing_values[missing_values > 0]
+
+```
+
+There are still NO missing values.
+
+
+# Descriptive Statistics
+
+```{r summary}
+
+# summary data variables
+summary(Orders)
+
+```
+
+Let's learn variables closer.
+
+
+## Categorycal Variabels (Factors)
+
+```{r categorycal-descriptive, fig.show="hold", out.width="50%"}
+
+# re-order levels
+reorder_size <- function(x) {
+        factor(x, levels = names(sort(table(x), decreasing = TRUE)))
+}
+
+reorder_value <- function(x, value, decreasing) {
+  a <- array(value)
+  names(a) <- x
+  if(decreasing){
+    factor(x, levels = names(sort(a, decreasing = TRUE)))
+  }else{
+    factor(x, levels = names(sort(a)))
+  }
+}
+
+all_factors <- Orders %>%
+  select_if(is.factor) %>%
+  select(-City) # except City as it has a lot of 
+                # levels of factor and it would be 
+                # hard to analyse it
+
+for(fct in colnames(all_factors)){
+  print(all_factors %>%
+          ggplot(aes(x = reorder_size(get(fct)))) +
+          geom_bar(aes(y = (..count..)/sum(..count..)), 
+                   fill="#4BA15D", show.legend = FALSE) +
+          xlab(fct) +
+          scale_y_continuous(labels = scales::percent, 
+                             name = "Proportion") +
+          labs(title=paste0("Proportion of ", fct, " variable")) +
+          theme(axis.text.x = element_text(
+            angle = ifelse(nrow(unique(all_factors[, fct])) > 4, 45, 0), 
+            hjust = ifelse(nrow(unique(all_factors[, fct])) > 4, 1, 0.5))) +
+          theme(plot.margin = unit(c(.5, 1, 1, 1), "lines")) )
+}
+
+```
+
+As **City** variable has hundreds levels, let's improve readability of **City** descriptive statistics and group cities with proportion less that 1% of the total as *Other*.
+
+```{r city-summary}
+
+
+Orders %>%
+  select(City) %>%
+  group_by(City) %>%
+  mutate(prop = n()) %>%
+  ungroup() %>%
+  mutate(Group = ifelse(prop / n() < 0.01, "Other", as.character(City)),
+         Group = as.factor(Group)) %>% 
+  ggplot(aes(x = reorder_size(Group), fill=ifelse(Group == "Other", "Other", "City"))) +
+                      geom_bar(aes(y = (..count..)/sum(..count..)), show.legend = FALSE) +
+                      xlab("City") +
+                      scale_y_continuous(labels = scales::percent, name = "Proportion") +
+                      scale_fill_manual(name="", values = c(Other="#ECECEC", "City"="#4BA15D")) +
+                      theme(axis.text.x = element_text(angle = 45, hjust = 1),
+                                legend.position="none") +
+                      labs(title="Proportion of City variable")
+
+```
+
+
+## Date Type Variabels
+
+Let's decompose date variables on date parts and analyse them.
+
+### Order Date
+
+```{r order-date-summary, fig.show="hold", out.width="50%"}
+
+all_date <- Orders %>%
+  select_if(is.Date)
+
+summary(all_date)
+
+order_date_parts <- all_date %>%
+  mutate(`Years`= as.factor(year(`Order Date`)), 
+         `Months`= as.factor(month.name[month(`Order Date`)]),
+         `Weeks`= as.factor(week(`Order Date`)),
+         `Weekdays`= as.factor(weekdays(`Order Date`)),
+         `Days`= as.factor(day(`Order Date`))) %>%
+  select(-c("Order Date", "Ship Date"))
+
+# Order Date
+for(part in colnames(order_date_parts)){
+  print(order_date_parts %>% ggplot(aes(x = reorder_size(get(part)))) +
+                      geom_bar(aes(y = (..count..)/sum(..count..)), fill="#4BA15D", show.legend = FALSE) +
+                      xlab(part) +
+                      scale_y_continuous(labels = scales::percent, name = "Proportion") +
+                            theme(axis.text.x = element_text(angle = 45, hjust = 1),
+                                legend.position="none") + 
+       labs(title=paste0("Proportion of ", part," in Order Date variable")) +
+       theme(plot.margin = unit(c(.5, 1, 1, 1), "lines")) )
+}
+
+```
+
+
+### Ship Date
+
+```{r ship-date-summary, fig.show="hold", out.width="50%"}
+
+ship_date_parts <- all_date %>%
+  mutate(`Years`= as.factor(year(`Ship Date`)), 
+         `Months`= as.factor(month.name[month(`Ship Date`)]),
+         `Weeks`= as.factor(week(`Ship Date`)),
+         `Weekdays`= as.factor(weekdays(`Ship Date`)),
+         `Days`= as.factor(day(`Ship Date`))) %>%
+  select(-c("Order Date", "Ship Date"))
+
+# Order Date
+for(part in colnames(ship_date_parts)){
+  print(ship_date_parts %>% ggplot(aes(x = reorder_size(get(part)))) +
+                      geom_bar(aes(y = (..count..)/sum(..count..)), fill="#4BA15D", show.legend = FALSE) +
+                      xlab(part) +
+                      scale_y_continuous(labels = scales::percent, name = "Proportion") +
+                            theme(axis.text.x = element_text(angle = 45, hjust = 1),
+                                legend.position="none") + 
+       labs(title=paste0("Proportion of ", part," in Ship Date variable")) +
+       theme(plot.margin = unit(c(.5, 1, 1, 1), "lines")) )
+}
+
+```
+
+
+## Numeric Type Variabels
+
+```{r all-num-vars}
+
+all_numeric <- Orders %>%
+  select_if(is.numeric)
+
+summary(all_numeric)
+
+```
+
+
+### Sales variable
+
+```{r sales-var}
+
+Mode <- function(x) {
+ a <- table(x)
+ as.numeric(names(a)[a == max(a)])
+}
+
+Orders %>%
+  ggplot(aes(x=Sales)) +
+  geom_histogram(aes(y=..density..), colour="black", fill="white", bins = 100)+
+  geom_density(color = "darkblue", fill="lightblue", alpha=0.5) +
+  geom_vline(xintercept = mean(Orders$Sales), linetype="dashed", colour="red") +
+  geom_vline(xintercept = median(Orders$Sales), linetype="dashed", colour="blue") +
+  annotate("rect", xmin=7e3, xmax=13e3, ymin=4e-3, ymax=5.5e-3,  color="black", fill="white") +
+  annotate("text", x=10e3, y=5e-3, label=paste("mean =", scales::dollar(mean(Orders$Sales), accuracy = 0.01)), color="red") +
+  annotate("text", x=10e3, y=4.5e-3, label=paste("median =", scales::dollar(median(Orders$Sales), accuracy = 0.01)), color="blue") + 
+  labs(title="Distibution of Sales variable")
+
+```
+
+
+### Profit variable
+
+```{r profit-var}
+
+Orders %>%
+  ggplot(aes(x=Profit)) +
+  geom_histogram(aes(y=..density..), colour="black", fill="white", bins = 100)+
+  geom_density(color = "darkblue", fill="lightblue", alpha=0.5) +
+  geom_vline(xintercept = mean(Orders$Profit), linetype="dashed", colour="red") +
+  geom_vline(xintercept = median(Orders$Profit), linetype="dashed", colour="blue") +
+  annotate("rect", xmin=3e3, xmax=7e3, ymin=4e-2, ymax=5.5e-2,  color="black", fill="white") +
+  annotate("text", x=5e3, y=5e-2, label=paste("mean =", scales::dollar(mean(Orders$Profit), accuracy = 0.01)), color="red") +
+  annotate("text", x=5e3, y=4.5e-2, label=paste("median =", scales::dollar(median(Orders$Profit), accuracy = 0.01)), color="blue") +
+  labs(title="Distibution of Profit variable")
+
+
+```
+
+The **Sales** and **Profit** variables has right skewed distributions.
+
+
+### Discount variable
+
+```{r discount-var}
+
+# Discount
+
+Orders %>%
+mutate(Discount=scales::percent(Discount)) %>%
+ggplot(aes(x = Discount)) +
+                      geom_bar(aes(y = (..count..)/sum(..count..)), fill="#4BA15D", show.legend = FALSE) +
+                      xlab("Discount") +
+                      scale_y_continuous(labels = scales::percent, name = "Proportion") +
+                            theme(legend.position="none") +
+  labs(title="Proportion of Discount variable")
+
+```
+
+
+### Quantity variable
+
+```{r quantity-var}
+
+# Quantity
+Orders %>%
+  mutate(Quantity = as.factor(Quantity)) %>%
+  ggplot(aes(x = Quantity)) +
+    geom_bar(aes(y = (..count..)/sum(..count..)), fill="#4BA15D", show.legend = FALSE) +
+    xlab("Quantity") +
+    scale_y_continuous(labels = scales::percent, name = "Proportion") +
+    theme(legend.position="none") +
+    labs(title="Proportion of Quantity variable")
+
+```
+
+
+# Exploratory Data Analysis
+
+```{r latest-year}
+
+years <- Orders %>% 
+          mutate(Year = year(`Order Date`)) %>% 
+          select(Year) %>% 
+          distinct() %>% 
+          arrange(Year)
+
+# latest year in the dataset
+latest_year <- max(years)
+
+```
+
+```{r mini-dashboar, include = FALSE, ref.label = c("general-metrics", "yoy-customers", "summarise-customers", "gross-sales", "total-profit", "basket-metrics-1", "basket-metrics-2", "customer-lifetime-value", "total-losses-orders", "losses-1", "losses-2", "clv-metrics")}
+```
+
+## General Metrics {.tabset}
+
+Questions we are trying to answer:
+
+* What is the gross sales revenue?
+* What is the total profit?
+* What is the total number of customers?
+* What is number of new customers?
+* What is average basket size and value?
+* What is Customer Lifetime Value (CLV)?
+   
+Let's find out general metrics for latest year. It's **`r latest_year`** year in this dataset and build mini-dashboard. 
+
+> **_NOTE:_** Click on **ººº** of the metric to go to the code of the calculation of its.
+
+
+### Code Formatting
+
+```{r code-formatting}
+
+colorize_label <- function(x) {
+  sprintf("<div><span style='color: darkgray; font-size: 11px;'>%s</span></div>", x)
+}
+dollar <- function(x, accuracy) {
+    value <- scales::dollar(x, accuracy = accuracy);
+    sprintf("<div><span style='color: black; font-size: 28px;'>%s</span></div>", value)
+}
+number <- function(x, accuracy) {
+    value <- scales::number(x, accuracy = accuracy);
+    sprintf("<div><span style='color: black; font-size: 28px;'>%s</span></div>", value)
+}
+colorize_percent <- function(x, accuracy) {
+  value <- scales::percent(x, accuracy = accuracy); 
+  if(x < 0){
+    sprintf('<div><span><svg style="vertical-align: middle;" width="30px" height="30px" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M8.72798 15.795L3.72798 7.795C3.10356 6.79593 3.82183 5.5 4.99998 5.5L15 5.5C16.1781 5.5 16.8964 6.79593 16.272 7.795L11.272 15.795C10.6845 16.735 9.31549 16.735 8.72798 15.795Z" fill="red"/>
+</svg></span><span style="vertical-align: middle; color: red; font-size: 24px;">%s</span></div>', value)
+  }else{
+    sprintf('<div><span><svg style="vertical-align: middle;" width="30px" height="30px" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+<path d="M11.272 5.205L16.272 13.205C16.8964 14.2041 16.1782 15.5 15 15.5H5.00002C3.82186 15.5 3.1036 14.2041 3.72802 13.205L8.72802 5.205C9.31552 4.265 10.6845 4.265 11.272 5.205Z" fill="green"/></svg></span><span style="vertical-align: middle; color: green; font-size: 24px;">%s</span></div>', value)
+  }
+}
+
+ref_label <- function(label){
+    sprintf('<div><span><a href="#%s" style="font-size: 16px;text-decoration: none; margin:0; padding:0; vertical-align: middle;" target="_self" rel=" noreferrer nofollow">ººº</a></span></div>', label)
+}
+```
+
+### Metrics {.active}
+
+::: {#grid_container .grid-container .grid-container--fit}
+
+::: {#revenue .grid-item .parent}
+::: div_0
+`r x <- ref_label("revenue-ref"); x`
+:::
+
+::: div_top_left
+`r x <- colorize_label("GROSS REVENUE"); x`
+`r x <- Gross_Sales; dollar(x, 0.1)`
+:::
+
+::: div_bottom_left
+`r x <- colorize_label("YoY GROWTH"); x`
+`r x <- colorize_percent(YoY_Growth_Sales, 0.1); x`
+:::
+:::
+
+::: {#profit .grid-item .parent}
+::: div_0
+`r x <- ref_label("profit-ref"); x`
+:::
+
+::: div_top_left
+`r x <- colorize_label("PROFIT"); x`
+`r x <- dollar(profit, 0.1); x`
+:::
+
+::: div_bottom_left
+`r x <- colorize_label("YoY GROWTH"); x`
+`r x <- YoY_Growth_Profit; colorize_percent(x, 0.1)`
+:::
+:::
+
+::: {#basket .grid-item .parent}
+::: div_0
+`r x <- ref_label("basket-ref"); x`
+:::
+
+::: div_top_left
+`r x <- colorize_label("BASKET VALUE"); x`
+`r x <- dollar(Basket_Value, 0.1); x`
+:::
+
+::: div_bottom_left
+`r x <- colorize_label("YoY GROWTH"); x`
+`r x <- YoY_Basket_Value; colorize_percent(x, 0.1)`
+:::
+
+::: div_bottom_right
+`r x <- colorize_label("BASKET SIZE"); x`
+`r x <- number(Basket_Size, 1L); x`
+:::
+:::
+
+::: {#clv .grid-item .parent}
+::: div_0
+`r x <- ref_label("clv-ref"); x`
+:::
+
+::: div_top_left
+`r x <- colorize_label("CLV"); x`
+`r x <- dollar(CLV_m, 0.1); x`
+:::
+
+::: div_bottom_left
+`r x <- colorize_label("YoY GROWTH"); x`
+`r x <- CLV_yoy; colorize_percent(x, 0.1)`
+:::
+:::
+
+::: {#newcustomers1 .grid-item .parent}
+::: div_0
+`r x <- ref_label("customers-ref"); x`
+:::
+::: {.div_top_left}
+`r x <- colorize_label("TOTAL CUSTOMERS"); x`
+`r x <- number(Unique_Customers, 1L); x`
+:::
+::: {.div_top_right}
+`r x <- colorize_label("YoY GROWTH"); x`
+`r x <- YoY_Growth_Unique; colorize_percent(x, 0.1)`
+:::
+::: {.div_bottom_left}
+`r x <- colorize_label("NEW CUSTOMERS"); x`
+`r x <- number(New_Customers, 1L); x`
+:::
+::: {.div_bottom_right}
+`r x <- colorize_label("YoY GROWTH"); x`
+`r x <- YoY_Growth_New; colorize_percent(x, 0.1)`
+:::
+:::
+
+::: {#lossesorders .grid-item .parent}
+::: div_0
+`r x <- ref_label("orders-ref"); x`
+:::
+::: {.div_top_left}
+`r x <- colorize_label("TOTAL ORDERS"); x`
+`r x <- number(Total_Orders, 1L); x`
+:::
+::: {.div_top_right}
+`r x <- colorize_label("YoY GROWTH"); x`
+`r x <- YoY_orders; colorize_percent(x, 0.1)`
+:::
+::: {.div_bottom_left}
+`r x <- colorize_label("LOSS ORDERS"); x`
+`r x <- number(Losses_Orders, 1L); x`
+:::
+::: {.div_bottom_right}
+`r x <- colorize_label("YoY GROWTH"); x`
+`r x <- YoY_losses; colorize_percent(x, 0.1)`
+:::
+:::
+
+:::
+
+
+## What is total gross revenue and YoY growth rate of its?
+
+```{r total-pivot-viz}
+
+# pivot table of gross sales and profit
+YoY_Sales <- Orders %>%
+  mutate(Year = year(`Order Date`)) %>%
+  group_by(Year) %>%
+  summarise(Sales = sum(Sales), 
+            Profit = sum(Profit)) %>%
+  arrange(Year) %>%
+  mutate(YoY_Growth_Sales = (Sales - lag(Sales))/lag(Sales),
+         YoY_Growth_Profit = (Profit - lag(Profit))/abs(lag(Profit)),
+         Year = as.factor(Year)) 
+
+# total pivot viz
+YoY_Sales %>%
+  mutate_at(c("YoY_Growth_Sales", "YoY_Growth_Profit"), 
+            ~cell_spec(scales::percent(., accuracy = 0.1), "html", color=case_when(. < 0 ~ "red",
+                                                   . >= 0 ~ "green",
+                                                   is.na(.) ~ "lightgray",
+                                                   TRUE ~ "black"))) %>%
+  mutate_at(c("Sales", "Profit"), ~scales::dollar(., accuracy = 0.01)) %>%
+  relocate(YoY_Growth_Sales, .after = Sales) %>%
+kbl(col.names = c("Year", "Total", "YoY Growth", "Total", "YoY Growth"),
+             caption = "Total sales and profit and YoY growth of its.",
+    escape = F,
+    align = c("lrrrr")) %>%
+row_spec(0, align = "c") %>%
+kable_styling(bootstrap_options = c("striped", "bordered"), full_width = TRUE) %>%
+add_header_above(header = c(" ", "Sales" = 2, "Profit" = 2), bold = TRUE, border_left = TRUE, border_right = TRUE)
+
+```
+
+```{r total-gross-revenue-plot}
+
+# Scale for second axis
+scale <- max(YoY_Sales$Sales)
+
+YoY_Sales %>%
+  ggplot() +
+  geom_bar(aes(x = Year, y = Sales, fill="Gross Revenue"), 
+           stat = "identity", show.legend = TRUE) +
+  geom_hline(yintercept = 0, color="darkgray") +
+  geom_line(aes(x = Year, y = YoY_Growth_Sales * scale, group = 1, color="YoY Growth"), size = 0.75) + 
+  geom_point(aes(x = Year, y = YoY_Growth_Sales * scale, color="YoY Growth"), size = 3) + 
+  geom_point(aes(x = Year, y = YoY_Growth_Sales * scale, color="YoY Growth"), 
+             shape=21, fill = "white", size = 2) + 
+  geom_text(aes(x = Year, y = YoY_Growth_Sales * scale, 
+                label = scales::percent(YoY_Growth_Sales, accuracy = 0.1)), 
+            vjust = -1.5, size = 4, color = "black") +
+  geom_text(aes(x = Year, y = Sales, 
+                label = scales::dollar(Sales, accuracy = 0.1, scale = 1e-3, suffix = " K")), 
+            vjust = -1.2, size = 4, color = "black") +
+  scale_y_continuous(sec.axis = sec_axis(trans = ~./scale, name = "YoY Growth", 
+                                         labels = scales::label_percent(), breaks = seq(0, 1, 0.2)), 
+                     labels = scales::label_number(suffix = " K", scale = 1e-3),
+                     limits = c(-30e3, 820e3)) +
+  scale_fill_manual(name = "", values=c("Gross Revenue"="#ADD7A0")) + 
+  scale_color_manual(name = "", values=c("YoY Growth"="black")) +
+  labs(title = "Total gross revenue & year over year (YoY) growth rate", y = "Gross Revenue, $") +
+  guides(color = guide_legend(override.aes = list(fill = "white")),
+         linetype = guide_legend(override.aes = list(fill = "white"))) +
+  theme(legend.position = "bottom",
+        legend.box="horizontal",
+        legend.key = element_rect(fill="white", color="white"),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(face="bold")) 
+
+```
+
+Our observations are:
+
+-   Total revenue in 2017 is $733.2 K and the total amount of revenue shows permanent YoY growth in absolute numbers except in 2015 that showed small dropping.
+-   2017 year shows dropping of YoY Sales growth rate on 9.1% vs previous year, that showed more than 30% growth from negative position in 2015.
+
+
+## What is total profit and YoY growth rate of its?
+
+```{r total-profit-plot}
+
+# scale for second axis
+scale <- max(YoY_Sales$Profit)
+YoY_Sales %>%
+  ggplot() +
+  geom_bar(aes(x = Year, y = Profit, fill="Total Profit"), 
+           stat = "identity", show.legend = TRUE) +
+  geom_line(aes(x = Year, 
+                y = YoY_Growth_Profit * scale, 
+                group = 1, 
+                color="YoY Growth"), size = 0.75) + 
+  geom_point(aes(x = Year, 
+                 y = YoY_Growth_Profit * scale, 
+                 color="YoY Growth"), size = 3) + 
+  geom_point(aes(x = Year, 
+                 y = YoY_Growth_Profit * scale, 
+                 color="YoY Growth"), 
+             shape=21, fill = "white", size = 2) + 
+  geom_text(aes(x = Year, y = YoY_Growth_Profit * scale, 
+                label = scales::percent(YoY_Growth_Profit, accuracy = 0.1)), 
+            vjust = -1.5, size = 3, color = "black") +
+  geom_text(aes(x = Year, y = Profit, label = scales::dollar(Profit, accuracy = 0.1, scale = 1e-3, suffix = " K")), 
+             vjust = -1.2, size = 4, color = "black") + 
+  scale_y_continuous(sec.axis = sec_axis(trans = ~./scale, name = "YoY Growth", 
+                                         labels = scales::label_percent(),
+                                         breaks = seq(0, 1, 0.2)), 
+                     labels = scales::label_number(suffix = " K", scale = 1e-3),
+                     limits = c(0, 100e3)) +
+  scale_fill_manual(name = "", values=c("Total Profit"="#ADD7A0")) + 
+  scale_color_manual(name = "", values=c("YoY Growth"="black")) +
+  labs(title = "Total profit & year over year (YoY) growth rate", x = "Year", y = "Profit, $") +
+  guides(color = guide_legend(override.aes = list(fill = "white")),
+         linetype = guide_legend(override.aes = list(fill = "white"))) +
+  theme(legend.position = "bottom",
+        legend.box="horizontal",
+        legend.key = element_rect(fill="white", color="white"),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(face="bold"))
+
+```
+
+Our observations are:
+
+-   The total amount of profit shows permanent YoY growth in absolute numbers.
+-   YoY Profit growth dropped on 18.5% in 2017 vs previous year.
+
+
+## Which are Sales and average Price quarterly?
+
+``` {r sales-avg-price-plot}
+
+# sales and avg price quarterly
+sales_price <- Orders %>%
+  mutate(Year = year(`Order Date`), Quarter = quarter(`Order Date`)) %>%
+  group_by(Year, Quarter) %>%
+  summarise(Sales = sum(Sales), Quantity = sum(Quantity), Price = Sales / Quantity, .groups = "drop") %>%
+  ungroup() %>%
+  select(-Quantity) %>%
+  mutate(YQ = paste0("Q", Quarter, "'", substring(as.character(Year),nchar(as.character(Year))-1)), n = row_number()) %>%
+  mutate(YQ = as.factor(YQ)) %>%
+  mutate(YQ = fct_reorder(YQ, n))
+
+scale <- max(sales_price$Sales) / max(sales_price$Price) 
+
+sales_price %>%
+  ggplot() +
+  geom_bar(aes(x = YQ, y = Sales, fill = "Sales"), stat = "identity", show.legend = TRUE) +
+  geom_line(aes(x = YQ, y = Price * scale, group = 1, color="Avg. Price"), size = 0.75) + 
+  geom_point(aes(x = YQ, y = Price * scale, color="Avg. Price"), size = 2, shape=15) +
+  geom_text(aes(x = YQ, y = Price * scale, label = scales::dollar(round(Price, 1)), vjust = ifelse(lag(Price) > Price & lead(Price) > Price, 2, -1.5)), size = 3) +
+  scale_y_continuous(sec.axis = sec_axis(trans = ~./scale, name = "Average Price, $"), labels = scales::label_number(suffix = "K", scale = 1e-3), limits = c(0, 300e3)) +
+  labs(title = "Sales and Price quarterly for all the time", x = "Quarter", y = "Sales, $") +
+  scale_colour_manual("", values=c("Avg. Price" = "black"))+
+  scale_fill_manual("", values=c("Sales" = "#ADD7A0"))+
+  geom_vline(aes(xintercept = 4.5), linetype = "dotted") +
+  geom_vline(aes(xintercept = 8.5), linetype = "dotted") +
+  geom_vline(aes(xintercept = 12.5), linetype = "dotted") +
+  guides(color = guide_legend(override.aes = list(fill = NA)),
+         linetype = guide_legend(override.aes = list(fill = NA))) +
+    theme(legend.key=element_rect(fill = "white", color="white"),
+          legend.box="horizontal",
+          legend.position="bottom")  
+
+```
+
+
+```{r sales-price-by-segment}
+
+o <- Orders %>%
+  mutate(Year = year(`Order Date`), Quarter = quarter(`Order Date`)) %>%
+  group_by(Year, Quarter, Segment) %>%
+  summarise(Sales = sum(Sales), Quantity = sum(Quantity), Price = Sales / Quantity, .groups = "drop") %>%
+  ungroup() %>%
+  select(-Quantity) %>%
+  mutate(YQ = paste0("Q", Quarter, "'", substring(as.character(Year),nchar(as.character(Year))-1)), n = row_number()) %>%
+  mutate(YQ = as.factor(YQ)) %>%
+  mutate(YQ = fct_reorder(YQ, n))
+
+o %>%
+  ggplot() +
+  geom_bar(aes(x = YQ, y = Sales, fill = "Sales"), stat = "identity", show.legend = TRUE) +
+  geom_line(aes(x = YQ, y = Price * scale, group = Segment, color=Segment), size = 0.75) + 
+  geom_point(aes(x = YQ, y = Price * scale, color=Segment), size = 1, shape=15) +  
+  geom_text(aes(x = YQ, y = Price * scale, label = scales::dollar(round(Price, 1)), vjust = ifelse(lag(Price) > Price & lead(Price) > Price, 2, -1.5)), size = 2) +
+  geom_vline(aes(xintercept = 4.5), linetype = "dotted") +
+  geom_vline(aes(xintercept = 8.5), linetype = "dotted") +
+  geom_vline(aes(xintercept = 12.5), linetype = "dotted") +
+  scale_y_continuous(sec.axis = sec_axis(trans = ~./scale, name = "Average Price, $"), labels = scales::label_number(suffix = "K", scale = 1e-3), limits = c(0, 650e3)) +
+  labs(title = "Sales and Price quarterly for all the time", x = "Quarter", y = "Sales, $") +
+  scale_fill_manual("", values=c("Sales" = "#ADD7A0"))+
+  guides(color = guide_legend(override.aes = list(fill = NA)),
+         linetype = guide_legend(override.aes = list(fill = NA))) +
+    theme(legend.key=element_rect(fill = "white", color="white"),
+          legend.title=element_blank(),
+          legend.box="horizontal",
+          legend.position="bottom") 
+
+```
+
+
+## What is average order value by month?
+
+```{r}
+
+Orders %>%
+  group_by(`Order ID`) %>%
+  summarise(Sales = sum(Sales), `Order Date` = first(`Order Date`), Year = first(year(`Order Date`))) %>%
+  ungroup() %>%
+  mutate(Month = month(`Order Date`), Year = as.factor(Year)) %>%
+  group_by(Year, Month) %>%
+  summarise(Avg.Sales = mean(Sales)) %>%
+  mutate(`Month Name` = month.name[Month]) %>%
+  mutate(`Month Name` = reorder_value(`Month Name`, Month, FALSE)) %>%
+  filter(Year %in% c(2016, 2017)) %>%
+  ggplot() +
+  geom_line(aes(x = `Month Name`, y = Avg.Sales, color=Year, group = Year), show.legend = TRUE, size=1) +
+  geom_point(aes(x = `Month Name`, y = ifelse(Year == 2017, Avg.Sales, NA), color=Year), size=2) +
+  geom_point(aes(x = `Month Name`, y = ifelse(Year == 2017, Avg.Sales, NA), color=Year), shape=21, size=1,  fill="white") +
+  geom_text(aes(x = `Month Name`, 
+                y = Avg.Sales, 
+                label = ifelse(Year == 2017, scales::dollar(Avg.Sales, accuracy = 0.1), NA), 
+                group = Year, 
+                vjust = ifelse(!is.na(lag(Avg.Sales)) & !is.na(lead(Avg.Sales)) & Avg.Sales < lag(Avg.Sales) & Avg.Sales < lead(Avg.Sales), 2, -1.3)), color="black", size = 3) +
+  scale_x_discrete(guide = guide_axis(angle = 45)) + 
+  scale_y_continuous(limits = c(0, 850), breaks = seq(0, 850, 100)) +
+  scale_color_manual(name = "Year", values=c("2016"="#ECECEC", "2017"="#4BA15D")) + 
+  labs(title = "Average Order Value by Month", x = "Month", y = "Sales, $") +
+  theme(legend.position = "bottom")
+
+```
+
+## What is average order value by week?
+
+```{r}
+
+Orders %>%
+  group_by(`Order ID`) %>%
+  summarise(Sales = sum(Sales), `Order Date` = first(`Order Date`)) %>%
+  ungroup() %>%
+  mutate(Week = week(`Order Date`), Week = as.factor(Week), Year = as.factor(year(`Order Date`))) %>%
+  group_by(Year, Week) %>%
+  summarise(Avg.Sales = mean(Sales)) %>%
+  filter(Year %in% c(2016, 2017)) %>%
+  ggplot() +
+  geom_line(aes(x = Week, y = Avg.Sales, color=Year, group = Year), show.legend = TRUE, size=0.75) +
+  geom_point(aes(x = Week, y = ifelse(Year == 2017, Avg.Sales, NA), color=Year), size=2) +
+  geom_point(aes(x = Week, y = ifelse(Year == 2017, Avg.Sales, NA), color=Year), shape=21, size=1,  fill="white") +
+  geom_text(aes(x = Week, 
+                y = Avg.Sales, 
+                label = ifelse(Year == 2017, scales::dollar(Avg.Sales, accuracy = 0.1), NA), 
+                group = Year, 
+                vjust = ifelse(!is.na(lag(Avg.Sales)) & !is.na(lead(Avg.Sales)) & Avg.Sales < lag(Avg.Sales) & Avg.Sales < lead(Avg.Sales), 2, -1.3)), color="black", size = 2) +
+  geom_vline(xintercept = seq(1, 52, 52/12), linetype = "dashed", size=0.25, color="darkgray") +
+  annotate("text", x = seq(1, 52, 52/12) + 2, y = 1, label = month.abb[1:12], size=2, color="darkgray") +
+  scale_x_discrete(guide = guide_axis(angle = 45)) + 
+  scale_y_continuous(limits = c(0, 1500), breaks = seq(0, 1500, 200)) +
+  scale_color_manual(name = "Year", values=c("2016"="#ECECEC", "2017"="#4BA15D")) + 
+  labs(title = "Average Order Value by Week", x = "Week", y = "Sales, $") +
+  theme(legend.position = "bottom")
+
+```
+
+## What is average order value by date?
+
+```{r}
+
+Orders %>%
+  group_by(`Order ID`) %>%
+  summarise(Sales = sum(Sales), `Order Date` = first(`Order Date`)) %>%
+  ungroup() %>%
+  mutate(Day = day(`Order Date`), Day = as.factor(Day), Year = as.factor(year(`Order Date`))) %>%
+  group_by(Year, Day) %>%
+  summarise(Avg.Sales = mean(Sales)) %>%
+  filter(Year %in% c(2016, 2017)) %>%
+  ggplot() +
+  geom_line(aes(x = Day, y = Avg.Sales, color=Year, group = Year), show.legend = TRUE, size=0.75) +
+  geom_point(aes(x = Day, y = ifelse(Year == 2017, Avg.Sales, NA), color=Year), size=2) +
+  geom_point(aes(x = Day, y = ifelse(Year == 2017, Avg.Sales, NA), color=Year), shape=21, size=1,  fill="white") +
+  geom_text(aes(x = Day, 
+                y = Avg.Sales, 
+                label = ifelse(Year == 2017, scales::dollar(Avg.Sales, accuracy = 0.1), NA), 
+                group = Year, 
+                vjust = ifelse(!is.na(lag(Avg.Sales)) & !is.na(lead(Avg.Sales)) & Avg.Sales < lag(Avg.Sales) & Avg.Sales < lead(Avg.Sales), 2, -1.3)), color="black", size = 2) +
+  scale_y_continuous(limits = c(0, 1400), breaks = seq(0, 1400, 100)) +
+  scale_color_manual(name = "Year", values=c("2016"="#ECECEC", "2017"="#4BA15D")) + 
+  labs(title = "Average Order Value by Date", x = "Day", y = "Sales, $") +
+  theme(legend.position = "bottom")
+
+```
+
+## What is average order value by day of week?
+
+```{r}
+
+Orders %>%
+  group_by(`Order ID`) %>%
+  summarise(Sales = sum(Sales), `Order Date` = first(`Order Date`)) %>%
+  ungroup() %>%
+  mutate(Wday = wday(`Order Date`, week_start=1), 
+         Year = year(`Order Date`)) %>%
+  group_by(Year, Wday) %>%
+  summarise(Avg.Sales = mean(Sales)) %>%
+  mutate(Weekday = c("Monday", "Tuesday", "Wednesday", "Thursday", "Friday","Saturday", "Sunday")[Wday], Year = as.factor(Year)) %>%
+  mutate(Weekday = reorder_value(Weekday, Wday, FALSE)) %>%
+  filter(Year %in% c(2016, 2017)) %>%
+  ggplot() +
+  geom_line(aes(x = Weekday, y = Avg.Sales, color=Year, group = Year), show.legend = TRUE, size = 1) +
+  geom_point(aes(x = Weekday, y = ifelse(Year == 2017, Avg.Sales, NA), color=Year), size=2) +
+  geom_point(aes(x = Weekday, y = ifelse(Year == 2017, Avg.Sales, NA), color=Year), shape=21, size=1, fill="white") +
+  geom_text(aes(x = Weekday, y = Avg.Sales, label = ifelse(Year == 2017, scales::dollar(Avg.Sales, accuracy = 0.1), NA), vjust = ifelse(!is.na(lag(Avg.Sales)) & !is.na(lead(Avg.Sales)) & Avg.Sales < lag(Avg.Sales) & Avg.Sales < lead(Avg.Sales), 2, -1.3)), size = 3) +
+  scale_x_discrete(guide = guide_axis(angle = 45)) + 
+  scale_y_continuous(limits = c(0, 750), breaks = seq(0, 750, 100)) +
+  scale_color_manual(name = "Year", values=c("2016"="#ECECEC", "2017"="#4BA15D")) + 
+  labs(title = "Average Order Vakue by Weekday", x = "Weekday", y = "Average Sales, $")+
+  theme(legend.position = "bottom")
+
+```
+
+
+## Which Category are best selling and most profitable?
+
+```{r category-pivot}
+
+# pivot table by category
+pivot1 <- Orders %>%
+  group_by(Category) %>%
+  summarise(Sales = sum(Sales), Profit = sum(Profit), Quantity = sum(Quantity)) %>%
+  ungroup() %>%
+  arrange(-Sales)
+
+```
+
+```{r total-sales-profit-quantity}
+
+# Total sales, profit and quantity for all the time
+pivot1 %>%
+  rbind(data.frame(Category = "Grand Total", Sales = sum(pivot1$Sales), Profit = sum(pivot1$Profit), Quantity = sum(pivot1$Quantity))) %>%
+  mutate_at(c(2, 3), ~scales::dollar(., accuracy = 0.01)) %>%
+  kbl(col.names = c("Category", "Sales", "Profit", "Quantity"),
+             caption = "Total Sales, Profit and Quantity by Category for all the time.",
+    escape = F,
+    align = c("lrrr")) %>%
+row_spec(0, align = "c") %>%
+kable_styling(bootstrap_options = c("striped", "bordered"), full_width = TRUE) %>%
+  row_spec(nrow(pivot1) + 1, bold = TRUE)
+
+
+```
+
+```{r grand-total-category, fig.show="hold", out.width="50%"}
+
+# Total sales
+pivot1 %>%
+  ggplot(aes(x = Category, y = Sales, fill = Category)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(x = Category, y = Sales, label=scales::dollar(Sales, accuracy = 0.1, scale = 1e-3,
+                                                              suffix="K")), size=4, vjust=-1.5) +
+  scale_y_continuous(labels = scales::label_number(suffix = "K", scale = 1e-3), 
+                     limits=c(0, 900e3),
+                     breaks = seq(0, 900e3, 100e3)) +
+  scale_fill_brewer(palette="Greens") +
+  labs(title = "Total Sales", x = "Category", y = "Sales, $") 
+  
+# total profit
+pivot1 %>%
+  ggplot(aes(x = Category, y = Profit, fill = Category)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(x = Category, y = Profit, label=scales::dollar(Profit, accuracy = 0.1, scale = 1e-3,
+                                                              suffix="K")), size=4, vjust=-1.5) +
+  labs(title = "Total Profit", x = "Category", y = "Profit, $") +
+  scale_fill_brewer(palette="Greens") +
+  scale_y_continuous(labels = scales::label_number(suffix = "K", scale = 1e-3),
+                     limits=c(0, 175e3), breaks = seq(0, 175e3, 25e3))
+
+# total quantity
+pivot1 %>%
+  ggplot(aes(x = Category, y = Quantity, fill = Category)) +
+  geom_col(show.legend = FALSE) +
+  scale_fill_brewer(palette="Greens") +
+  labs(title = "Total Quantity", x = "Category", y = "Quantity")
+
+```
+
+Our observations are:
+
+-   The best selling category is **Technology**, but all three category make similar amount of sales.
+-   The most profitable category is **Technology** too. The least profitable category is **Furniture**.
+-   **Furniture** makes similar quantity sold as **Technology**, it is makes the least profit of all the Categories.
+
+These plots appear total metrics. Let's build a table with year over year growth of sales and profit.
+
+
+## What is YoY Sales and Profit Growth by Category?
+
+```{r yoy-category}
+
+options(dplyr.summarise.inform = FALSE)
+
+YoY <- Orders %>%
+  mutate(Year = year(`Order Date`)) %>%
+  group_by(Category, Year) %>%
+  summarise(Sales = round(sum(Sales), 2), 
+            Profit = round(sum(Profit), 2)) %>%
+  mutate(YoY_Growth_Sales = (Sales - lag(Sales))/lag(Sales),
+         YoY_Growth_Profit = (Profit - lag(Profit))/abs(lag(Profit))) 
+
+```
+
+```{r yoy-category-pivottable}
+
+YoY_cat <- YoY %>%
+  pivot_wider(names_from = "Year", values_from = c("Sales", "Profit", "YoY_Growth_Sales", "YoY_Growth_Profit"))
+
+sales_profit_columns <- YoY_cat %>% ungroup() %>% select(starts_with(c("Sales", "Profit"))) %>% colnames()
+yoy_growth_columns <- YoY_cat %>% ungroup() %>% select(starts_with("YoY_")) %>% colnames()
+
+# table viz
+YoY_cat %>% 
+  select(all_of(sales_profit_columns)) %>%
+  mutate_at(sales_profit_columns, ~scales::dollar(., accuracy = 1L)) %>%
+  kbl(col.names = c("Category", as.character(2014:2017), as.character(2014:2017)),
+      caption = "Sales and Profit by Category", escape = F, 
+      align = c("l", rep('r',times=8))) %>%
+  kable_styling(bootstrap_options = c("striped", "bordered"), full_width = TRUE) %>%
+  row_spec(0, align = "c") %>%
+  add_header_above(header = c(" " = 1, "Sales" = 4, "Profit" = 4), 
+                   bold = TRUE, border_left = TRUE, border_right = TRUE)
+
+```
+
+```{r yoy-category-yoy-pivottable}
+
+YoY_cat %>% select(all_of(yoy_growth_columns)) %>% 
+  mutate_if(is.numeric, ~cell_spec(scales::percent(., accuracy = 0.1), "html", color=case_when(. < 0 ~ "red",
+                                                   . >= 0 ~ "green",
+                                                   is.na(.) ~ "lightgray",
+                                                   TRUE ~ "black"))) %>%
+kbl(col.names = c("Customer Segment", as.character(2014:2017), as.character(2014:2017)),
+             caption = "Year over year Sales and Profit growth by Category",
+    escape = F,
+    align = c("l", rep('r',times=8))) %>%
+row_spec(0, align = "c") %>%
+kable_styling(bootstrap_options = c("striped", "bordered"), full_width = TRUE) %>%
+add_header_above(header = c("", "YoY Sales Growth" = 4, "YoY Profit Growth" = 4), bold = TRUE, border_left = TRUE, border_right = TRUE)
+  
+  
+```
+
+```{r yoy-sales-category-plot, warning=FALSE}
+
+scale <- max(YoY$Sales)
+
+YoY %>%
+  ggplot() +
+   geom_col(aes(x=Year, y=Sales, fill="Sales")) +
+    geom_line(aes(x = Year, y = YoY_Growth_Sales * scale, group = Category, color="YoY Growth"), size = 0.75) + 
+    geom_point(aes(x = Year, y = YoY_Growth_Sales * scale, color="YoY Growth"), size = 3) + 
+    geom_point(aes(x = Year, y = YoY_Growth_Sales * scale, color="YoY Growth"), shape=21, fill = "white", size = 2) + 
+    geom_text(aes(x = Year, y = YoY_Growth_Sales * scale, 
+                  label = scales::percent(YoY_Growth_Sales, accuracy=1L),
+                  vjust = ifelse(YoY_Growth_Sales < 0, 2, -1.5)), size = 3, color = "black") +
+   labs(title = "YoY Sales Growth by Category", x = "Year", y = "Sales, $") +
+   scale_y_continuous(sec.axis = sec_axis(trans = ~./scale, name = "", labels = scales::label_percent(), breaks = seq(0, 1, 0.2)), 
+                      labels = scales::number(seq(0, 300e3, by=50e3), scale = 1e-3, suffix = "K"), limits = c(-50e3, 300e3),
+                      breaks = seq(0, 300e3, by=50e3)) +
+  scale_fill_manual(name = "Year", values=c("Sales"="#ADD7A0")) +
+  scale_colour_manual(name = "", values=c("YoY Growth"="black")) +
+  facet_wrap(.~Category) +
+  theme(legend.position = "bottom", legend.title = element_blank(),
+        strip.background = element_blank(),
+        strip.text = element_text(color = "black", face = "bold"))
+
+```
+
+```{r yoy-profit-category-plot, warning=FALSE}
+
+scale <- max(YoY$Profit)
+
+YoY %>%
+  ggplot() +
+   geom_col(aes(x=Year, y=Profit, fill="Profit")) +
+    geom_line(aes(x = Year, y = YoY_Growth_Profit * scale, group = Category, color="YoY Growth"), size = 0.75) + 
+    geom_point(aes(x = Year, y = YoY_Growth_Profit * scale, color="YoY Growth"), size = 3) + 
+    geom_point(aes(x = Year, y = YoY_Growth_Profit * scale, color="YoY Growth"), shape=21, fill = "white", size = 2) + 
+    geom_text(aes(x = Year, y = YoY_Growth_Profit * scale, 
+                  label = scales::percent(YoY_Growth_Profit, accuracy=1L),
+                  vjust = ifelse(YoY_Growth_Profit < 0, 2, -1.5)), size = 3, color = "black") +
+   labs(title = "YoY Profit Growth by Category", x = "Year", y = "Profit, $") +
+   scale_y_continuous(sec.axis = sec_axis(trans = ~./scale, name = "", labels = scales::label_percent(), breaks = seq(0, 1, 0.2)), 
+                      labels = scales::number(seq(0, 80e3, by=25e3), scale = 1e-3, suffix = "K"), limits = c(-40e3, 80e3),
+                      breaks = seq(0, 80e3, by=25e3)) +
+  scale_fill_manual(name = "Year", values=c("Profit"="#ADD7A0")) +
+  scale_colour_manual(name = "", values=c("YoY Growth"="black")) +
+  facet_wrap(.~Category) +
+  theme(legend.position = "bottom", legend.title = element_blank(),
+        strip.background = element_blank(),
+        strip.text = element_text(color = "black", face = "bold"))
+
+```
+
+Our observations are:
+
+-   Despite the **Furniture** category had permanent the YoY Sales growth this category had not profit in **2017** and losses are 57%.
+-   Slowdown of the YoY Sales growth affected the YoY profit growth in 2017 for **Office Supplies** Category.
+-   Dropping of the YoY Sales growth of **Technology** category almost in two times in **2017** did not affect the YoY profit growth in this category, and vice versa it showed the YoY growth of profit on 8%.
+
+
+## General metrics calculation
+
+
+```{r general-metrics}
+
+#total metrics
+general_metrics <- Orders %>%
+  mutate(Year = factor(year(`Order Date`))) %>%
+  group_by(Year) %>%
+  summarise(Sales = sum(Sales), 
+            Profit = sum(Profit)) %>%
+  arrange(Year) %>%
+  mutate(YoY_Growth_Sales = (Sales - lag(Sales))/lag(Sales),
+         YoY_Growth_Profit = (Profit - lag(Profit))/abs(lag(Profit)))
+
+```
+
+
+### What is the gross sales revenue? {#revenue-ref}
+
+```{r gross-sales}
+
+# gross sales
+Gross_Sales <- general_metrics[general_metrics$Year ==  latest_year, "Sales"][[1]]
+## YoY Growth Sales
+YoY_Growth_Sales <- general_metrics[general_metrics$Year == latest_year, "YoY_Growth_Sales"][[1]]
+
+paste(latest_year, "> Gross Sales:", scales::dollar(Gross_Sales, accuracy = 0.01), ", YoY Sales Growth:", scales::percent(YoY_Growth_Sales, accuracy = 0.1))
+
+```
+
+
+### What is the total profit? {#profit-ref}
+
+```{r total-profit}
+
+# profit
+profit <- general_metrics[general_metrics$Year == latest_year, "Profit"][[1]]
+# YoY Growth Profit
+YoY_Growth_Profit <- general_metrics[general_metrics$Year == latest_year, "YoY_Growth_Profit"][[1]]
+
+paste(latest_year, "> Gross Profit:", scales::dollar(profit, accuracy = 0.01), ", YoY Profit Growth:", scales::percent(YoY_Growth_Profit, accuracy = 0.1))
+
+```
+
+
+### What are total and loss orders and YoY Growth of its? {#orders-ref}
+
+```{r total-losses-orders}
+# total losses orders
+total_losses_orders <- (Orders %>%
+  group_by(`Order ID`) %>%
+  summarise(Profit = sum(Profit)) %>%
+  summarise(losses = scales::percent(n_distinct(`Order ID`[Profit < 0])/n(), accuracy = 0.1)))$losses[[1]]
+
+paste("Total losses orders:", total_losses_orders)
+
+```
+
+
+```{r losses-1, warning=FALSE}
+loss <- Orders %>%
+  mutate(Year = as.factor(year(`Order Date`))) %>%
+  group_by(`Order ID`) %>%
+  summarise(Profit = sum(Profit), Year = first(Year)) %>%
+  ungroup() %>%
+  group_by(Year) %>%
+  summarise(n_orders = n_distinct(`Order ID`), n_losses = n_distinct(`Order ID`[Profit < 0]), p_losses = n_losses / n_orders) %>%
+  mutate(YoY_orders=(n_orders-lag(n_orders))/lag(n_orders), YoY_losses=(n_losses-lag(n_losses))/lag(n_losses))
+
+```
+
+```{r losses-2, warning=FALSE}
+
+Total_Orders <- loss[loss$Year == latest_year, "n_orders"][[1]]
+YoY_orders <- loss[loss$Year == latest_year, "YoY_orders"][[1]]
+Losses_Orders <- loss[loss$Year == latest_year, "n_losses"][[1]]
+YoY_losses <- loss[loss$Year == latest_year, "YoY_losses"][[1]]
+
+paste0(latest_year, " > Total Orders: ",  Total_Orders, " > YoY Growth: ", 
+       scales::percent(YoY_orders, accuracy = 1L), ", Losable Orders: ", 
+       Losses_Orders, " > YoY Growth: ", 
+       scales::percent(YoY_losses, accuracy = 1L))
+
+```
+
+```{r loss-plot, fig.show="hold", out.width="50%"}
+scale1 <- max(loss$n_orders)
+
+plot1 <- loss %>%
+  ggplot() +
+  geom_bar(aes(x=Year, y=n_orders, fill = "# of Orders"), stat="identity") +
+  geom_line(aes(x=Year, y=YoY_orders*scale1, group=1, color = "YoY Growth"), size=1) + 
+  geom_point(aes(x=Year, y=YoY_orders*scale1, color = "YoY Growth"), size = 3) + 
+  geom_point(aes(x=Year, y=YoY_orders*scale1, color = "YoY Growth"), shape = 21, size = 1.5, fill="white") + 
+  geom_text(aes(x=Year, y=YoY_orders*scale1, label=scales::percent(YoY_orders, accuracy=1L)), vjust=-1.5)  +
+  geom_text(aes(x=Year, y=n_orders, label=n_orders), vjust=-1)  +
+  scale_y_continuous(breaks = seq(0, 1900, 200), sec.axis = sec_axis(trans = ~./scale1, breaks = seq(0, 1, 0.2), labels = scales::label_percent(), name = ""),
+                     limits = c(0, 1900)) +
+  scale_fill_manual(values = c("# of Orders"="#ADD7A0")) +
+  scale_color_manual(values = c("YoY Growth" = "black")) +
+  labs(title="YoY # of Orders growth", y = "Total # of Orders") +
+  theme(legend.position = "bottom",
+        legend.title = element_blank())
+
+scale2 <- max(loss$n_losses)
+
+plot2 <- loss %>%
+  ggplot() +
+  geom_bar(aes(x=Year, y=n_losses, fill = "# of loss Orders"), stat="identity") + 
+  geom_line(aes(x=Year, y=YoY_losses*scale2, group=1, color = "YoY Growth"), size=1) + 
+  geom_point(aes(x=Year, y=YoY_losses*scale2, color = "YoY Growth"), size = 3) + 
+  geom_point(aes(x=Year, y=YoY_losses*scale2, color = "YoY Growth"), shape = 21, size = 1.5, fill="white") + 
+  geom_text(aes(x=Year, y=n_losses, label=n_losses), vjust=-1)  +
+  geom_text(aes(x=Year, y=YoY_losses*scale2, label=scales::percent(YoY_losses, accuracy=1L)), vjust=-1.5) +
+  scale_y_continuous(breaks = seq(0, 400, 50), sec.axis = sec_axis(trans = ~./scale2, breaks = seq(0, 1, 0.2), labels = scales::label_percent(), name = ""),
+                     limits = c(0, 400)) +
+  scale_fill_manual(values = c("# of loss Orders"="#ADD7A0")) +
+  scale_color_manual(values = c("YoY Growth" = "black")) +
+  labs(title="YoY # of loss Orders growth", y = "# of loss Orders") +
+  theme(legend.position = "bottom",
+        legend.title = element_blank())
+  
+plot1
+plot2
+
+```
+
+
+## Which Sub-Category are best selling and most profitable/lossable?
+
+```{r sub-category-pivot}
+
+total_sales_profit <- Orders %>%
+  group_by(`Sub-Category`) %>%
+  summarise(Sales = sum(Sales), Profit = sum(Profit), Quantity = sum(Quantity)) %>%
+  ungroup() %>%
+  arrange(-Sales)
+
+```
+
+
+```{r plot-subcategry}
+
+total_sales_profit %>%
+  ggplot(aes(x = reorder_value(`Sub-Category`, Sales, TRUE), y = Sales)) +
+  geom_col(fill="#ADD7A0", show.legend = FALSE) +
+  geom_text(aes(x = `Sub-Category`, y = Sales, label = scales::dollar(Sales, scale=1e-3, suffix = "K", accuracy = 0.1)), vjust = -1.2, size = 2.3, color = "black") +
+  scale_x_discrete(guide = guide_axis(angle = 45)) + 
+  labs(title = "Total Sales by Sub-Category for all the time", x = "Sub-Category", y = "Sales, $") +
+  scale_y_continuous(labels = scales::label_number(suffix = "K", scale = 1e-3), limits = c(0, 350e3), breaks = seq(0, 350e3, 50e3))
+
+```
+
+
+```{r subcategory-profit-plot}
+
+total_sales_profit %>%
+  ggplot(aes(x = reorder_value(`Sub-Category`, Profit, TRUE), y = Profit)) +
+  geom_col(aes(fill=ifelse(Profit > 0, "Profit", "Loss")), show.legend = TRUE) +
+  scale_x_discrete(guide = guide_axis(angle = 45)) + 
+  geom_text(aes(x = `Sub-Category`, y = Profit, 
+                label = scales::dollar(Profit, scale=1e-3, suffix = "K", accuracy = 0.1), 
+                vjust = ifelse(Profit >= 0, -1.2, 1.5)), size = 2.3, color = "black") +
+  labs(title = "Total Profit by Sub-Category for all the time", x = "Sub-Category", y = "Profit, $") +
+  scale_fill_manual(name="", values=c("Profit"="#ADD7A0", "Loss"="#EE9779")) +
+  scale_y_continuous(labels = scales::label_number(suffix = "K", scale = 1e-3), limits = c(-20e3, 60e3)) +
+  theme(legend.position = "bottom")
+
+```
+
+
+## What is YoY Sales and Profit Growth by Sub-Category?
+
+Arranging Profit by sub-categories we can see which the sub-categories make losses.
+Let's see on the year-over-year sub-categories sales growth for the lastest year in the dataset vs. before one.
+
+```{r yoy-subcategory-pivot}
+
+YoY_sub <- Orders %>%
+  mutate(Year = year(`Order Date`)) %>%
+  filter(Year %in% c(latest_year-1, latest_year)) %>%
+  group_by(`Sub-Category`, Year) %>%
+  summarise(Sales = round(sum(Sales), 2), 
+            Profit = round(sum(Profit), 2)) %>%
+  mutate(YoY_Growth_Sales = (Sales - lag(Sales))/lag(Sales),
+         YoY_Growth_Profit = (Profit - lag(Profit))/abs(lag(Profit))) 
+
+```
+
+#### YoY Sales Growth
+
+```{r yoy-sales-growth-sub}
+# sales plot
+scale <- max(YoY_sub$Sales)
+YoY_sub %>%
+  mutate(Sales = ifelse(Year == 2016, -Sales, Sales)) %>%
+  ggplot() +
+   geom_col(aes(x=`Sub-Category`, y=Sales, fill=ifelse(Year==2016, "2016", "2017"))) +
+    geom_point(aes(x = `Sub-Category`, y = ifelse(Year==2016, NA, YoY_Growth_Sales * scale),
+                   color=ifelse(YoY_Growth_Sales < 0, "Drop", "Growth")), shape=18, size = 3, show.legend = FALSE) + 
+    geom_text(aes(x = `Sub-Category`, y = ifelse(Year==2016, NA, YoY_Growth_Sales * scale), label = scales::percent(YoY_Growth_Sales, accuracy = 0.1),
+                  vjust = ifelse(YoY_Growth_Sales > 0, -1.5, 2.5)), size = 2, color = "black") +
+   labs(title = "YoY Growth Sales by Sub-Category for 2017 vs. 2016", x = "Sub-Category", y = "Sales, $") +
+   scale_y_continuous(sec.axis = sec_axis(trans = ~./scale, name = "", labels = scales::label_percent()), 
+                      labels = scales::number(c(rev(seq(0, 100e3, by=20e3)), seq(0, 120e3, by=20e3)[-1]), scale = 1e-3, suffix = "K"), limits = c(-100e3, 120e3),
+                      breaks = seq(-100e3, 120e3, by=20e3)) +
+  scale_fill_manual(name = "Sales", values=c("2016"="#ececec", "2017"="#ADD7A0")) +
+  scale_color_manual(name = "", values=c("Drop"="red", "Growth"="black")) +
+  scale_x_discrete(guide = guide_axis(angle = 45)) +
+  theme(legend.position = "bottom")
+
+
+```
+
+#### YoY Profit Growth
+
+```{r yoy-profit-growth-sub}
+
+scale <- max(YoY_sub$Profit)
+YoY_sub %>%
+  mutate(Profit = ifelse(Year == 2016, -Profit, Profit)) %>%
+  ggplot() +
+   geom_col(aes(x=`Sub-Category`, y=Profit, fill=ifelse(Year==2016, "2016", "2017"))) +
+    geom_point(aes(x = `Sub-Category`, y = ifelse(Year==2016, NA, YoY_Growth_Profit * scale),
+                   color=ifelse(YoY_Growth_Profit < 0, "Drop", "Growth")), shape = 18, size = 3, show.legend = FALSE) + 
+    geom_text(aes(x = `Sub-Category`, y = ifelse(Year==2016, NA, YoY_Growth_Profit * scale), label = scales::percent(YoY_Growth_Profit, accuracy = 0.1),
+                  vjust = ifelse(YoY_Growth_Profit > 0, -1.5, 2.5)), size = 2, color = "black") +
+   labs(title = "YoY Growth Profit by Sub-Category for 2017 vs. 2016", x = "Sub-Category", y = "Profit, $") +
+   scale_y_continuous(sec.axis = sec_axis(trans = ~./scale, name = "", labels = scales::label_percent(), 
+                                          breaks = seq(-4, 1, 0.5)), 
+                      labels = scales::number(c(rev(seq(0, 100e3, by=20e3)), seq(0, 40e3, by=20e3)[-1]), scale = 1e-3, suffix = "K"), limits = c(-100e3, 40e3),
+                      breaks = seq(-100e3, 40e3, by=20e3)) +
+  scale_fill_manual(name = "Profit", values=c("2016"="#ececec", "2017"="#ADD7A0"))  +
+  scale_color_manual(name = "", values=c("Drop"="red", "Growth"="black")) +
+  scale_x_discrete(guide = guide_axis(angle = 45)) +
+  theme(legend.position = "bottom")
+
+```
+
+## Which sub-categories do customers prefer to buy together at the same time?
+
+```{r cross-selling}
+
+# Sorry, but this is low performance code :-(
+# cross-selling analysis
+pair <- expand.grid("one"=levels(Orders$`Sub-Category`), "two"=levels(Orders$`Sub-Category`))
+
+pivot <- Orders %>%
+  pivot_wider(names_from = "Sub-Category", values_from = Quantity) %>%
+  select(c("Order ID", levels(Orders$`Sub-Category`))) %>%
+  group_by(`Order ID`) %>%
+  summarize_all(~sum(., na.rm = TRUE))
+
+count2 <- function(a, b){
+  if(a == b){
+    return(NA)
+  }
+  nrow(pivot[pivot[,a] > 0 & pivot[,b] > 0,])/length(unique(Orders$`Order ID`))
+}
+
+count2 <- Vectorize(count2)
+
+pair %>%
+  mutate(one=as.character(one), two=as.character(two)) %>%
+  mutate(orders=count2(one, two)) %>%
+  ggplot() +
+  geom_raster(aes(x=one, y=two, fill=orders), ) +
+  scale_fill_gradient(high = "#ADD7A0",  low = "white", na.value = "white") +
+  scale_x_discrete(guide = guide_axis(angle = 45)) +
+  geom_text(aes(x=one, y=two, label=scales::percent(orders, accuracy = 0.01)), size = 2) +
+  labs(title="Cross-selling sub-categories for all the time", 
+       subtitle = "Sub-categories which customers prefered to buy together per one order/transaction.",
+       x="Sub-Catgeory", y="Sub-Catgeory") +
+  theme(legend.position = "none")
+
+```
+
+
+```{r cross-selling-segment,  fig.height = 10}
+
+# Sorry, but this is low performance code too :-(
+# cross-selling analysis by segment
+pair_seg <- expand.grid("one"=levels(Orders$`Sub-Category`), "two"=levels(Orders$`Sub-Category`), 
+                    "segment"=levels(Orders$Segment))
+
+pivot_seg <- Orders %>%
+  pivot_wider(names_from = "Sub-Category", values_from = Quantity) %>%
+  select(c("Order ID", Segment, levels(Orders$`Sub-Category`))) %>%
+  group_by(`Order ID`, Segment) %>%
+  summarize_all(~sum(., na.rm = TRUE))
+
+count2_seg <- function(a, b, seg){
+  if(a == b){
+    return(NA)
+  }
+  nrow(pivot_seg[pivot_seg[,"Segment"] == seg & pivot_seg[,a] > 0 & pivot_seg[,b] > 0,])/length(unique(Orders[Orders$Segment == seg,]$`Order ID`))
+}
+
+count2_seg <- Vectorize(count2_seg)
+
+pair_seg %>%
+  mutate(one=as.character(one), two=as.character(two), segment = as.character(segment)) %>%
+  mutate(orders=count2_seg(one, two, segment)) %>%
+  ggplot() +
+  geom_raster(aes(x=one, y=two, fill=orders), ) +
+  scale_fill_gradient(high = "#ADD7A0",  low = "white", na.value = "white") +
+  scale_x_discrete(guide = guide_axis(angle = 45)) +
+  geom_text(aes(x=one, y=two, label=scales::percent(orders, accuracy = 0.01)), size = 2) +
+  labs(title="Cross-selling sub-categories for all the time", 
+       subtitle = "Sub-categories which customers prefered to buy together per one order/transaction.",
+       x="Sub-Catgeory", y="Sub-Catgeory") +
+  theme(legend.position = "none", strip.background = element_blank(),
+        strip.text = element_text(color = "black", face = "bold")) +
+  facet_wrap(~segment, ncol = 1)
+
+```
+
+Rows and columns contain all the sub-categories within the store. Each cell represents the percentage of total number of orders for all the time, buying a product of sub-category on the Y-axis the customer also buying a products on the X-axis in one order.
+
+The redder the cell becomes, the higher the number of orders contain the same sub-category that crosses by row section.
+
+
+## What is average basket size and value? {#basket-ref}
+
+```{r basket-metrics-1}
+
+basket <- Orders %>%
+  mutate(Year = year(`Order Date`)) %>%
+  group_by(`Order ID`, Year) %>%
+  summarise(Quantity = sum(Quantity), Sales = sum(Sales)) %>%
+  ungroup() %>%
+  group_by(Year) %>%
+  summarise(Quantity = sum(Quantity), Order_Count = n(), Sales = sum(Sales)) %>%
+  ungroup() %>%
+  mutate(Basket_Value = round(Sales / Order_Count, digits = 2), Basket_Size = round(Quantity / Order_Count, digits = 0), 
+         YoY_Growth = (Sales - lag(Sales))/lag(Sales)) %>%
+  select(-c(Quantity, Order_Count, Sales))
+
+```
+
+```{r basket-metrics-2}
+# average basket value
+Basket_Value <- basket[basket$Year == latest_year, "Basket_Value"][[1]]
+# YoY growth basket value
+YoY_Basket_Value <- basket[basket$Year == latest_year, "YoY_Growth"][[1]]
+# basker size
+Basket_Size <- basket[basket$Year == latest_year, "Basket_Size"][[1]]
+
+paste(latest_year, "> Basket Value:", scales::dollar(Basket_Value, accuracy = 0.1), ", YoY Basket Value:", scales::percent(YoY_Basket_Value, accuracy = 0.1), " Basket Size:", Basket_Size)
+
+```
+
+
+```{r yoy-basket-table-viz}
+
+basket %>% 
+  mutate_at("YoY_Growth", ~cell_spec(scales::percent(., accuracy = 0.1), "html", 
+                                     color=case_when(. < 0 ~ "red",
+                                                   . >= 0 ~ "green",
+                                                   is.na(.) ~ "lightgray",
+                                                   TRUE ~ "black"))) %>%
+  mutate(Basket_Value = scales::dollar(Basket_Value, accuracy = 0.01)) %>%
+  relocate(YoY_Growth, .after = Basket_Value) %>%
+  kbl(col.names = c("Year", "Avg. Basket Value", "YoY Growth", "Basket Size"),
+      caption = "YoY average basket value growth",
+      escape = F,
+      align = c("l", rep('r',times=3))) %>%
+  row_spec(0, align = "c") %>%
+  kable_styling(bootstrap_options = c("striped", "bordered"), full_width = TRUE)
+
+```
+
+## What are YoY basket value Growth and basket size by Customer Segment?
+
+```{r yoy-basket-plot}
+
+basket <- Orders %>%
+  mutate(Year = year(`Order Date`)) %>%
+  group_by(Segment, `Order ID`, Year) %>%
+  summarise(Quantity = sum(Quantity), Sales = sum(Sales)) %>%
+  ungroup() %>%
+  group_by(Segment, Year) %>%
+  summarise(Quantity = sum(Quantity), Order_Count = n(), Sales = sum(Sales)) %>%
+  mutate(Basket_Value = round(Sales / Order_Count, digits = 2), Basket_Size = round(Quantity / Order_Count, digits = 0), 
+         YoY_Growth = (Basket_Value - lag(Basket_Value))/lag(Basket_Value)) %>%
+  select(-c(Quantity, Order_Count, Sales))
+
+scale <- min(basket$Basket_Value) / max(basket$Basket_Size)
+yoy_scale <- max(basket$Basket_Value)
+
+basket %>%
+  ggplot() +
+  geom_bar(aes(x = Year, y = Basket_Value, fill="Average Value"), stat = "identity") +
+  geom_line(aes(x = Year, y = YoY_Growth * yoy_scale, group = 1, color="YoY Growth")) +
+  geom_point(aes(x = Year, y = YoY_Growth * yoy_scale, color="YoY Growth"), size = 2) +
+  geom_text(aes(x = Year, y = YoY_Growth * yoy_scale, label = scales::percent(YoY_Growth, accuracy = 0.01)), vjust = -1, size = 3) +
+  geom_line(aes(x = Year, y = Basket_Size * scale, group = 1), linetype="15") +
+  geom_point(aes(x = Year, y = Basket_Size * scale, shape= "Size"), size=2) +
+  geom_text(aes(x = Year, y = Basket_Size * scale, label = Basket_Size), vjust = -1, size = 3, color="black") +
+  geom_text(aes(x = Year, y = Basket_Value, label = scales::dollar(round(Basket_Value, 1))), vjust = -1, size = 2) +
+  
+  scale_color_manual(values=c("Size"="black", "YoY Growth"="black")) +
+  scale_shape_manual(values=c("Size"=15)) +
+  
+  scale_y_continuous(sec.axis = sec_axis(trans = ~./yoy_scale, labels = scales::label_percent(accuracy = 1L), name="YoY Growth",
+                                         breaks = seq(0, 1, 0.2)), limits = c(-200, 600), breaks = seq(0, 600, 100)) +
+  scale_fill_manual(name="", values=c("Average Value"="#ADD7A0")) +
+  labs(title = "YoY average basket value growth and basket size by Segment", x = "Year", y = "Average value, $") +
+  guides(color = guide_legend(override.aes = list(fill = NA)),
+         linetype = guide_legend(override.aes = list(fill = NA))) +
+  theme(legend.key=element_rect(fill = "white", color="white"),
+          legend.title=element_blank(),
+          legend.box="horizontal",
+          legend.position="bottom", strip.background = element_blank(),
+        strip.text = element_text(color = "black", face = "bold")) +
+  facet_wrap(.~Segment)
+
+
+```
+
+As we can see the average basket value was dropping every year and basket size was too.
+
+
+## What are number of total and new customers and YoY growth of its? {#customers-ref}
+
+```{r yoy-customers}
+
+# New Customers
+cust <- Orders %>%
+  group_by(`Customer ID`) %>%
+  summarise(`First Year` = year(min(`Order Date`))) %>%
+  ungroup() %>%
+  group_by(`First Year`) %>%
+  summarise(`New Customers` = n()) %>%
+  inner_join(
+    # total unique customers
+    Orders %>%
+      group_by(Year = year(`Order Date`)) %>%
+      summarise(`Unique Customers` = n_distinct(`Customer ID`)),
+    by = c("First Year" = "Year")) %>%
+  mutate(`YoY Growth Unique` = (`Unique Customers` - lag(`Unique Customers`))/lag(`Unique Customers`),
+         `YoY Growth New` = (`New Customers` - lag(`New Customers`))/lag(`New Customers`)) %>%
+  relocate(`Year` = `First Year`, `New Customers`, `YoY Growth New`, `Unique Customers`, `YoY Growth Unique`)
+
+```
+
+```{r summarise-customers}
+
+# New customers
+New_Customers <- cust[cust$Year == latest_year, "New Customers"][[1]]
+# YoY Growth of new customers
+YoY_Growth_New <- cust[cust$Year == latest_year, "YoY Growth New"][[1]]
+# Unique customers
+Unique_Customers <- cust[cust$Year == latest_year, "Unique Customers"][[1]]
+# YoY Growth of new customers
+YoY_Growth_Unique <- cust[cust$Year == latest_year, "YoY Growth Unique"][[1]]
+
+paste(latest_year,"> New Customers:", New_Customers, ", YoY Growth of New Customers:", scales::percent(YoY_Growth_New, accuracy = 0.1), 
+            " Total Customers:", Unique_Customers,
+            ", YoY Growth of Total Customers:", scales::percent(YoY_Growth_Unique, accuracy = 0.1))
+
+```
+
+
+``` {r new-customer}
+
+cust %>%
+  mutate_at(c("YoY Growth New", "YoY Growth Unique"), ~cell_spec(scales::percent(., accuracy = 0.1), "html", 
+                                     color=case_when(. < 0 ~ "red",
+                                                   . >= 0 ~ "green",
+                                                   is.na(.) ~ "lightgray",
+                                                   TRUE ~ "black"))) %>%
+kbl(col.names = c("Year", "New Customers", "YoY New Growth", "Unique Customers", "YoY Unique Growth"),
+             caption = "YoY Unique and Total Customers growth",
+    escape = F,
+    align = c("l", rep('r',times=4))) %>%
+row_spec(0, align = "c") %>%
+kable_styling(bootstrap_options = c("striped", "bordered"), full_width = TRUE)
+
+```
+
+
+``` {r new-vs-total-customer}
+
+scale <- max(cust$`Unique Customers`)
+cust %>%
+  ggplot() +
+  geom_bar(aes(x = Year, y = `Unique Customers`, fill="Unique"), stat = "identity") +
+  geom_line(aes(x = Year, y = `New Customers`, group = 1, color="New"), size = 1) + 
+  geom_point(aes(x = Year, y = `New Customers`, color="New"), shape=18, size = 4) + 
+  geom_text(aes(x = Year, y = `New Customers`, label = `New Customers`), vjust = -1, size = 5) +
+  labs(title = "New customers vs total unique customers by Year", x = "Year", y = "Unique Customers") +
+  scale_y_continuous(sec.axis = sec_axis(trans = ~., labels = NULL)) +
+  scale_fill_manual(name = "", values=c("Unique"="#ADD7A0")) +
+  scale_color_manual(name = "", values=c("New"="black")) +
+  theme(legend.position = "bottom")
+  
+```
+
+## What is Customer Lifetime Value (CTV)?
+
+
+```{r customer-lifetime-value}
+
+# Total Revenue
+total_revenue <- general_metrics[, c("Year", "Sales")]
+# Customer Value
+cust_value <- total_revenue %>% 
+  inner_join(cust %>% 
+               mutate(Year = factor(Year)), by = "Year") %>% 
+  mutate(cv = Sales / `Unique Customers`)
+
+# Customer Lifetime Value
+CLV <- cust_value %>%
+  inner_join(
+    Orders %>%
+      mutate(Year = as.factor(year(`Order Date`))) %>%
+      group_by(Year, `Customer ID`) %>%
+      mutate(last_date = last(`Order Date`)) %>%
+      left_join(
+        Orders %>%
+          group_by(`Customer ID`) %>%
+          summarise(first_date = first(`Order Date`, order_by = `Order Date`)),
+        by = "Customer ID"
+      ) %>%
+      group_by(Year, `Customer ID`) %>%
+      summarise(first_date = first(first_date), last_date = last(last_date)) %>%
+      mutate(days = last_date - first_date) %>%
+      ungroup() %>%
+      group_by(Year) %>%
+      summarise(days_sum = sum(days), n = n_distinct(`Customer ID`), cls = time_length(days_sum, "years") / n),
+    by="Year"
+  ) %>%
+  mutate(clv = cv * cls) %>% 
+  select(Year, clv) %>%
+  arrange(Year) %>%
+  mutate(YoY_Growth = (clv - lag(clv))/lag(clv))
+
+```
+
+```{r clv-metrics}
+
+# Mini-dashboard CLV metrics
+CLV_m <- CLV[CLV$Year == latest_year, "clv"][[1]]
+CLV_yoy <- CLV[CLV$Year == latest_year, "YoY_Growth"][[1]]
+  
+```
+
+```{r clv-plot}
+
+CLV %>%
+  ggplot() +
+  geom_bar(aes(x=Year, y=clv, fill="CLV"), stat="identity") +
+  geom_line(aes(x=Year, y=YoY_Growth*min(CLV$clv), group=1, color="YoY Growth")) +
+  geom_point(aes(x=Year, y=YoY_Growth*min(CLV$clv), color="YoY Growth"), size=3) +
+  geom_point(aes(x=Year, y=YoY_Growth*min(CLV$clv), color="YoY Growth"), shape=21, size=2, fill="white") +
+  geom_text(aes(x=Year, y=YoY_Growth*min(CLV$clv), label=scales::percent(YoY_Growth, accuracy = 1L)), size=3, vjust=-1.5) +
+  geom_text(aes(x=Year, y=clv, label=scales::dollar(clv, accuracy = 0.1)), size=4, vjust=-1.5) +
+  scale_y_continuous(limits = c(0, 3200)) +
+  scale_fill_manual(name = "", values=c("CLV"="#ADD7A0")) +
+  scale_color_manual(name = "", values=c("YoY Growth"="black")) +
+  theme(legend.position = "bottom") +
+  labs(title = "Customer Lifetime Value", x = "Year", y = "CLV, $")
+
+```
+
+
+## What are top profitable products?
+
+```{r top-products}
+products <- Orders %>%
+  group_by(`Product ID`) %>%
+  summarise(`Product Name` = first(`Product Name`),
+            Category = first(Category),
+            `Sub-Category` = first(`Sub-Category`),
+            Sales = sum(Sales),
+            Profit = sum(Profit),
+            Quantity = sum(Quantity)) %>%
+  ungroup() %>%
+  arrange(-Profit) %>%
+  select(`Product Name`, Category, `Sub-Category`, Sales, Profit, Quantity)
+
+products %>%
+  head(10) %>%
+  mutate(`Product Name` = as.factor(`Product Name`)) %>%
+  mutate(`Product Name` = fct_reorder(`Product Name`, Profit)) %>%
+  ggplot() +
+  geom_bar(aes(x = `Product Name`, y = Profit, fill = Category), stat = "identity") +
+  geom_text(aes(x=`Product Name`, y=Profit, label = scales::dollar(Profit, accuracy = 0.1)), size = 3, hjust = 1.2) +
+  labs(title = "Top-10 profitable products", x = "Product Name", y = "Profit, $") +
+  scale_x_discrete(labels = function(x) str_trunc(x, width = 24, side = "right", ellipsis = "...")) +
+  scale_fill_brewer(palette="Greens") +
+  coord_flip() + 
+  theme(legend.position="bottom")
+
+```
+
+
+## Who are the top profitable customers?
+
+```{r top-customers}
+customers <- Orders %>%
+  group_by(`Order ID`) %>%
+  summarise(Sales = sum(Sales), Profit = sum(Profit), Segment = first(Segment), `Customer ID` = first(`Customer ID`), `Customer Name` = first(`Customer Name`)) %>%
+  ungroup() %>%
+  group_by(`Customer ID`) %>%
+  summarize(`Customer Name` = first(`Customer Name`), Segment = first(Segment), Profit = sum(Profit), Orders = n()) %>%
+  ungroup() %>%
+  arrange(-Profit) %>%
+  select(-`Customer ID`) 
+
+customers %>%
+  head(10) %>%
+  mutate(`Customer Name` = as.factor(`Customer Name`)) %>%
+  mutate(`Customer Name` = fct_reorder(`Customer Name`, Profit)) %>%
+  ggplot() +
+  geom_bar(aes(x = `Customer Name`, y = Profit, fill = Segment), stat = "identity") +
+  geom_text(aes(x=`Customer Name`, y=Profit, label = scales::dollar(Profit, accuracy = 0.1)), hjust = 1.2) +
+  labs(title = "Top-10 profitable customers", x = "Customer Name", y = "Profit, $") +
+  scale_fill_brewer(palette="Greens") +
+  coord_flip() + 
+  theme(legend.position="bottom")
+
+```
+
+## What is percentage of Revenue from new business?
+
+```{r new-biz-revenue}
+
+new_bis <- Orders %>%
+  group_by(`Customer ID`) %>%
+  mutate(`First Year` = year(min(`Order Date`)), Year = year(`Order Date`), Month = month.name[month(`Order Date`)]) %>%
+  ungroup() %>%
+  group_by(`Year`, Month) %>%
+  summarise(Sales = sum(ifelse(Year == `First Year`, Sales, 0))) %>%
+  inner_join(
+Orders %>%
+  mutate(Year = year(`Order Date`), Month = month.name[month(`Order Date`)]) %>%
+  group_by(Year, Month) %>%
+  summarise(Sales = sum(Sales), 
+            Profit = sum(Profit)),
+by = c("Year", "Month")) %>%
+  rename("New Sales" = Sales.x, "Total Sales" = Sales.y) %>%
+  mutate(Year = as.factor(Year), Month = as.factor(Month), percent = `New Sales` / `Total Sales`) %>%
+  mutate(Month = fct_reorder(Month, match(Month, month.name))) 
+
+biz <- new_bis %>%
+  mutate(Quarter = lubridate::quarter(match(Month, month.name))) %>%
+  group_by(Year, Quarter) %>%
+  summarise(`New Sales` = sum(`New Sales`), `Total Sales` = sum(`Total Sales`)) %>%
+  mutate(percent = `New Sales` / `Total Sales`) %>%
+  mutate(YQ = paste0("Q", Quarter, "'", substring(as.character(Year),nchar(as.character(Year))-1)), n = row_number()) %>%
+  mutate(YQ = as.factor(YQ)) %>%
+  mutate(YQ = reorder_value(YQ, n, FALSE))
+  
+scale <- (biz %>% group_by(YQ) %>% summarise(`Total Sales` = sum(`Total Sales`)) %>% summarise(max = max(`Total Sales`)))$max
+  
+biz %>%
+  ggplot() +
+  geom_bar(aes(x = YQ, y = `Total Sales`, fill="Total Revenue"), stat="identity") +
+  geom_bar(aes(x = YQ, y = `New Sales`, fill="New Revenue"), stat="identity") +
+  geom_line(aes(x = YQ, y = percent *scale, group = 1), color = "black") +
+  geom_point(aes(x = YQ, y = percent *scale, group = 1), color = "black", size = 3) +
+  geom_point(aes(x = YQ, y = percent *scale, group = 1), shape = 21, size = 1.5, color = "white", fill = "white") +
+  geom_text(aes(x = YQ, y = percent *scale, group = 1, label = scales::percent(percent, accuracy = 0.1)), size = 2.5, vjust = -1.5, color = "black") +
+  geom_vline(aes(xintercept = 4.5), linetype = "dotted") +
+  geom_vline(aes(xintercept = 8.5), linetype = "dotted") +
+  geom_vline(aes(xintercept = 12.5), linetype = "dotted") +
+  labs(title = "Percentage of Revenue From New Business vs Total Revenue", x = "Quarter", y = "Revenue, $") +
+  scale_y_continuous(labels = scales::label_number(suffix = " K", scale = 1e-3), limits = c(0, 300e3), breaks = seq(0, 300e3, 25e3)) +
+  scale_colour_manual(" ", values=c("Price" = "black"))+
+  scale_fill_manual("", values=c("Total Revenue" = "#ADD7A0", "New Revenue" = "#4BA15D"))+
+  guides(color = guide_legend(override.aes = list(fill = NA)),
+         linetype = guide_legend(override.aes = list(fill = NA))) +
+    theme(legend.key=element_rect(fill = "white", color="white"),
+          legend.title=element_blank(),
+          legend.box="horizontal",
+          legend.position="bottom")  
+
+```
+
+
+## Which city/region/state is the best selling and most profitable?
+
+### Region
+
+Best selling and most profitable Region for all the time in absolute numbers.
+
+```{r total-region}
+
+Orders %>%
+  group_by(Region) %>%
+  summarise(Sales = sum(Sales), 
+            Profit = sum(Profit)) %>%
+  ungroup() %>%
+  arrange(-Profit) %>%
+  mutate(Sales = scales::dollar(Sales, accuracy = 0.01), 
+         Profit = scales::dollar(Profit, accuracy = 0.01)) %>%
+  kbl(col.names = c("Region", "Sales", "Profit"),
+      caption = "Total Sales and Profit by Region for all the time", 
+      escape = F, align = "lrr") %>%
+  row_spec(0, align = "c") %>%
+  kable_styling(bootstrap_options = c("striped", "bordered"), full_width = TRUE)
+
+```
+
+
+```{r profitable-region, fig.show="hold", out.width="50%"}
+
+# Most Profitable region
+plot1 <- Orders %>%
+  group_by(Region) %>%
+  summarise(Profit = sum(Profit)) %>%
+  ungroup() %>%
+  mutate(perc = Profit / sum(Profit)) %>% 
+  arrange(perc) %>%
+  ggplot(aes(x = 0, y=perc, fill=Region)) +
+  geom_bar(stat="identity") +
+  geom_text(aes(label=scales::percent(perc)),
+            position = position_stack(vjust = 0.5)) +
+  scale_fill_brewer(palette="Greens") +
+  labs(title = "Most Profitable Region for all the time", x = "", y = "") +
+  scale_y_continuous(labels = scales::label_percent()) +
+  coord_polar(theta = "y") +
+  theme(legend.title = element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        panel.grid  = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.border = element_blank(),
+        legend.position = "bottom")
+
+# Which region makes most total losses?
+plot2 <- Orders %>%
+  group_by(`Order ID`) %>%
+  summarise(Profit = sum(Profit), Region = first(Region)) %>%
+  group_by(Region) %>%
+  summarise(perc_losses = n_distinct(`Order ID`[Profit < 0])/n(),
+            losses_count = n_distinct(`Order ID`[Profit < 0]),
+            total_count = n()) %>%
+  ggplot(aes(x = 0, y=perc_losses, fill=Region)) +
+  geom_bar(stat="identity") +
+  geom_text(aes(label=scales::percent(perc_losses)),
+            position = position_stack(vjust = 0.5)) +
+  scale_fill_brewer(palette="Greens") +
+  labs(title = "# of Loss orders by Region", x = "", y = "") +
+  scale_y_continuous(labels = scales::label_percent()) +
+  coord_polar(theta = "y") +
+  theme(legend.title = element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        panel.grid  = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.border = element_blank(),
+        legend.position = "bottom")
+  
+plot1
+plot2
+
+```
+
+Our observations are:
++ The most profitable **Region** is West. It is almost 38% of Profit. The less profitable region is Central Region.
++ West Region has less number of loss orders, and Central Region has the most number os loss orders.
++ East Region has almost 1/3 part of total profit, but the region has high number of loss orders.
+
+#### What are YoY Sales and Profit growth by Region?
+
+```{r yoy-region}
+
+YoY_reg <- Orders %>%
+  mutate(Year = year(`Order Date`)) %>%
+  group_by(Region, Year) %>%
+  summarise(Sales = sum(Sales),
+            Profit = sum(Profit)) %>%
+  mutate(YoY_Growth_Sales = (Sales - lag(Sales))/lag(Sales),
+         YoY_Growth_Profit = (Profit - lag(Profit))/abs(lag(Profit)))
+
+reg_table <- YoY_reg %>%
+pivot_wider(names_from = "Year", values_from = c("Sales", "Profit", "YoY_Growth_Sales", "YoY_Growth_Profit"))
+
+sales_columns <- reg_table %>% ungroup() %>% select(starts_with("Sales")) %>% colnames()
+profit_columns <- reg_table %>% ungroup() %>% select(starts_with("Profit")) %>% colnames()
+yoy_sales_columns <- reg_table %>% ungroup() %>% select(starts_with("YoY_Growth_Sales_")) %>% colnames()
+yoy_profit_columns <- reg_table %>% ungroup() %>% select(starts_with("YoY_Growth_Profit_")) %>% colnames()
+
+reg_table %>% select(sales_columns, profit_columns) %>%
+  mutate_if(is.numeric, ~scales::dollar(., accurate = 0.01)) %>%
+kbl(col.names = c("Region", as.character(2014:2017), as.character(2014:2017)),
+             caption = "Sales and Profit by Region",
+    escape = F,
+    align = c("l", rep('r',times=8))) %>%
+row_spec(0, align = "c") %>%
+kable_styling(bootstrap_options = c("striped", "bordered"), full_width = TRUE) %>%
+add_header_above(header = c("", "Sales" = 4, "Profit" = 4), bold = TRUE, border_left = TRUE, border_right = TRUE)
+
+```
+
+```{r yoy-region-table}
+
+yoy_growth_columns <- reg_table %>% ungroup() %>% select(starts_with("YoY_")) %>% colnames()
+reg_table %>% select(yoy_growth_columns) %>%
+  mutate_if(is.numeric, ~cell_spec(scales::percent(., accuracy = 0.1), "html", color=case_when(. < 0 ~ "red",
+                                                   . >= 0 ~ "green",
+                                                   is.na(.) ~ "lightgray",
+                                                   TRUE ~ "black"))) %>%
+kbl(col.names = c("Region", as.character(2014:2017), as.character(2014:2017)),
+             caption = "Year over the year Sales and Profit growth by Region",
+    escape = F,
+    align = c("l", rep('r',times=8))) %>%
+row_spec(0, align = "c") %>%
+kable_styling(bootstrap_options = c("striped", "bordered"), full_width = TRUE) %>%
+add_header_above(header = c("", "YoY Sales Growth" = 4, "YoY Profit Growth" = 4), bold = TRUE, border_left = TRUE, border_right = TRUE)
+
+
+
+```
+
+#### YoY Sales Growth
+
+```{r yoy-sales-region-plot}
+
+YoY_reg %>%
+  ggplot() +
+  geom_bar(aes(x=Year, y=Sales, fill=Region, group=Region), stat="identity") +
+  geom_line(aes(x=Year, y=YoY_Growth_Sales*max(YoY_reg$Sales[YoY_reg$Year == Year]), group=Region)) +
+  geom_point(aes(x=Year, y=YoY_Growth_Sales*max(YoY_reg$Sales[YoY_reg$Year == Year]), group=Region), size = 3) +
+  geom_point(aes(x=Year, y=YoY_Growth_Sales*max(YoY_reg$Sales[YoY_reg$Year == Year]), group=Region), shape = 21, size = 1.5, fill = "white") +
+  geom_text(aes(x=Year, y=YoY_Growth_Sales*max(YoY_reg$Sales[YoY_reg$Year == Year]), 
+                label = scales::percent(YoY_Growth_Sales, accuracy = 0.1), group=Region), vjust=-1.5) +
+  scale_y_continuous(labels = scales::label_number(scale = 1e-3, suffix = " K")) +
+  labs(title = "YoY Sales Growth by Region", x="Year", y="Sales, $") +
+  scale_fill_brewer(palette="Greens") +
+  facet_wrap(.~Region) + 
+  theme(strip.background = element_blank(),
+        strip.text = element_text(color = "black", face = "bold"),
+        legend.position = "none")
+
+
+```
+
+#### YoY Profit Growth
+
+
+```{r yoy-profit-region-plot}
+
+YoY_reg %>%
+  ggplot() +
+  geom_bar(aes(x=Year, y=Profit, fill=Region, group=Region), stat="identity") +
+  geom_line(aes(x=Year, y=YoY_Growth_Profit*max(YoY_reg$Profit[YoY_reg$Year == Year]) *
+                              ifelse(Year == 2015 & Region == "Central", 0.05, 1), group=Region)) +
+  geom_point(aes(x=Year, y=YoY_Growth_Profit*max(YoY_reg$Profit[YoY_reg$Year == Year]) *
+                              ifelse(Year == 2015 & Region == "Central", 0.05, 1), group=Region), size = 3) +
+  geom_point(aes(x=Year, y=YoY_Growth_Profit*max(YoY_reg$Profit[YoY_reg$Year == Year]) *
+                              ifelse(Year == 2015 & Region == "Central", 0.05, 1), group=Region), shape = 21, size = 1.5, fill = "white") +
+  geom_text(aes(x=Year, y=YoY_Growth_Profit*max(YoY_reg$Profit[YoY_reg$Year == Year]) *
+                              ifelse(Year == 2015 & Region == "Central", 0.05, 1), 
+                label = scales::percent(YoY_Growth_Profit, accuracy = 0.1), group=Region), vjust=-1.5) +
+  scale_y_continuous(labels = scales::label_number(scale = 1e-3, suffix = " K"), limits = c(-30e3, 70e3)) +
+  labs(title = "YoY Profit Growth by Region", x="Year", y="Profit, $") +
+  scale_fill_brewer(palette="Greens") +
+  facet_wrap(.~Region) + 
+  theme(strip.background = element_blank(),
+        strip.text = element_text(color = "black", face = "bold"),
+        legend.position = "none")
+
+```
+
+
+#### YoY Losses Orders Growth
+
+```{r yoy-losable-region-plot}
+
+losses <- Orders %>%
+  mutate(Year = as.factor(year(`Order Date`))) %>%
+  group_by(`Order ID`) %>%
+  summarise(Profit = sum(Profit), Region = first(Region), Year = first(Year)) %>%
+  ungroup() %>%
+  group_by(Region, Year) %>%
+  summarise(losses = n_distinct(`Order ID`[Profit < 0])) %>%
+  mutate(`YoY Growth` = (losses - lag(losses))/lag(losses)) 
+
+scale <- max(losses$losses)
+
+losses %>%
+  ggplot() +
+  geom_bar(aes(x=Year, y=losses, fill=Region, group=Region), stat="identity") +
+  geom_line(aes(x=Year, y=`YoY Growth` * scale, group=Region)) +
+  geom_point(aes(x=Year, y=`YoY Growth` * scale, group=Region), size = 3) +
+  geom_point(aes(x=Year, y=`YoY Growth` * scale, group=Region), shape = 21, size = 1.5, fill="white") +
+  geom_text(aes(x=Year, y=`YoY Growth` * scale, group=Region, label=scales::percent(`YoY Growth`, accuracy = 0.1)), vjust=-1.5) +
+  scale_y_continuous(limits = c(-15, 150), breaks = seq(0, 150, 25)) +
+  labs(title = "YoY # of losable orders Growth by Region", x="Year", y="# of Losable Orders") +
+  scale_fill_brewer(palette="Greens") +
+  facet_wrap(.~Region) +
+  theme(strip.background = element_blank(),
+        strip.text = element_text(color = "black", face = "bold"),
+        legend.position = "none")
+
+```
+
+
+### City
+
+
+```{r cities-df}
+df_cities <- Orders %>%
+  group_by(City) %>%
+  summarise(Sales = sum(Sales), Profit = sum(Profit), Quantity = sum(Quantity))
+
+```
+
+#### What are top profitable Cities?
+
+```{r top-prof-cities}
+
+df_cities %>%
+  arrange(-Profit) %>%
+  mutate(City = reorder_value(City, Profit, FALSE)) %>%
+  head(10) %>%
+  pivot_longer(c(Sales, Profit), names_to = "Name", values_to = "Value") %>%
+  ggplot() +
+  geom_bar(aes(x = City, y = Value, fill=Name), stat="identity", position = position_dodge(width = 1)) +
+  geom_text(aes(x=City, y=Value, label = scales::dollar(Value, accuracy = 0.1), group=Name), size=2.5, position = position_dodge(width = 1), hjust = -0.1) +
+  labs(title = "Top 10 most profitable Cities", x = "City", y = "Profit & Sales, $") +
+  scale_y_continuous(labels = scales::label_number(suffix = " K", scale = 1e-3), breaks = seq(0, 300e3, by = 50e3), limits=c(0, 300e3)) +
+   scale_fill_manual("", values=c("Sales" = "#ADD7A0", "Profit" = "#4BA15D"))+
+  guides(color = guide_legend(override.aes = list(fill = NA)),
+         linetype = guide_legend(override.aes = list(fill = NA))) +
+    theme(legend.key=element_rect(fill = "white", color="white"),
+          legend.title=element_blank(),
+          legend.box="horizontal",
+          legend.position="bottom") +
+  coord_flip()
+
+```
+
+#### What are bottom profitable Cities?
+
+```{r bottom-prof-cities}
+
+df_cities %>%
+  arrange(Profit) %>%
+  mutate(City = reorder_value(City, Profit, FALSE)) %>%
+  head(10) %>%
+  pivot_longer(c(Sales, Profit), names_to = "Name", values_to = "Value") %>%
+  ggplot() +
+  geom_bar(aes(x = City, y = Value, fill=Name), stat="identity", position = position_dodge(width = 1)) +
+  geom_text(aes(x=City, y=Value, label = scales::dollar(Value, accuracy = 0.1), group=Name,
+                hjust = ifelse(Value < 0, 1.1, -0.1)), size=2.5, position = position_dodge(width = 1)) +
+  labs(title = "Bottom 10 most profitable Cities", x = "State", y = "Profit & Sales, $") +
+  scale_y_continuous(labels = scales::label_number(suffix = " K", scale = 1e-3), breaks = seq(-50e3, 200e3, by = 25e3), limits=c(-50e3, 200e3)) +
+   scale_fill_manual("", values=c("Sales" = "#ADD7A0", "Profit" = "#4BA15D"))+
+  guides(color = guide_legend(override.aes = list(fill = NA)),
+         linetype = guide_legend(override.aes = list(fill = NA))) +
+    theme(legend.key=element_rect(fill = "white", color="white"),
+          legend.title=element_blank(),
+          legend.box="horizontal",
+          legend.position="bottom") +
+  coord_flip()
+
+```
+
+
+### State 
+
+```{r states-df}
+
+df_states <- Orders %>%
+  group_by(State) %>%
+  summarise(Sales = sum(Sales), Profit = sum(Profit), Quantity = sum(Quantity))
+
+```
+
+
+#### What are top profitable States?
+
+```{r top-states-plot}
+
+df_states %>%
+  arrange(-Profit) %>%
+  mutate(State = reorder_value(State, Profit, FALSE)) %>%
+  head(10) %>%
+  pivot_longer(c(Sales, Profit), names_to = "Name", values_to = "Value") %>%
+  ggplot() +
+  geom_bar(aes(x = State, y = Value, fill=Name), stat="identity", position = position_dodge(width = 1)) +
+  geom_text(aes(x=State, y=Value, label = scales::dollar(Value, accuracy = 0.1), group=Name), size=2.5, position = position_dodge(width = 1), hjust = -0.1) +
+  labs(title = "Top 10 most profitable States", x = "State", y = "Profit & Sales, $") +
+  scale_y_continuous(labels = scales::label_number(suffix = " K", scale = 1e-3), breaks = seq(0, 500e3, by = 50e3), limits=c(0, 500e3)) +
+   scale_fill_manual("", values=c("Sales" = "#ADD7A0", "Profit" = "#4BA15D"))+
+  guides(color = guide_legend(override.aes = list(fill = NA)),
+         linetype = guide_legend(override.aes = list(fill = NA))) +
+    theme(legend.key=element_rect(fill = "white", color="white"),
+          legend.title=element_blank(),
+          legend.box="horizontal",
+          legend.position="bottom") +
+  coord_flip()
+```
+
+#### What are bottom profitable States?
+
+```{r bottom-states-plot}
+
+df_states %>%
+  arrange(Profit) %>%
+  mutate(State = reorder_value(State, Profit, FALSE)) %>%
+  head(10) %>%
+  pivot_longer(c(Sales, Profit), names_to = "Name", values_to = "Value") %>%
+  ggplot() +
+  geom_bar(aes(x = State, y = Value, fill=Name), stat="identity", position = position_dodge(width = 1)) +
+  geom_text(aes(x=State, y=Value, label = scales::dollar(Value, accuracy = 0.1), group=Name,
+                hjust = ifelse(Value < 0, 1.1, -0.1)), size=2.5, position = position_dodge(width = 1)) +
+  labs(title = "Bottom 10 most profitable States", x = "State", y = "Profit & Sales, $") +
+  scale_y_continuous(labels = scales::label_number(suffix = " K", scale = 1e-3), breaks = seq(-50e3, 200e3, by = 25e3), limits=c(-50e3, 200e3)) +
+   scale_fill_manual("", values=c("Sales" = "#ADD7A0", "Profit" = "#4BA15D"))+
+  guides(color = guide_legend(override.aes = list(fill = NA)),
+         linetype = guide_legend(override.aes = list(fill = NA))) +
+    theme(legend.key=element_rect(fill = "white", color="white"),
+          legend.title=element_blank(),
+          legend.box="horizontal",
+          legend.position="bottom") +
+  coord_flip()
+
+```
+
+## Which is the preferred ship mode?
+
+```{r preferred-ship-mode}
+Orders %>%
+  group_by(`Ship Mode`) %>%
+  summarise(count = n_distinct(`Order ID`)) %>%
+  ungroup() %>%
+  mutate(perc = count / sum(count)) %>% 
+  arrange(perc) %>%
+  mutate(labels = scales::percent(perc)) %>%
+ggplot(aes(x="", y=perc, fill=`Ship Mode`)) +
+  geom_col() +
+  geom_text(aes(label = labels),
+            position = position_stack(vjust = 0.5)) +
+  coord_polar(theta = "y") +
+  labs(title = "Most preferred Ship Mode", x = "", y = "") +
+  scale_fill_brewer(palette="Greens") +
+  theme(legend.title = element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        panel.grid  = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.border = element_blank())
+
+```
+
+
+
+
+## Customer Segment
+
+The questions we are trying to answer:
+
+* What size of customer segments?
+* Which customer segment is the best selling for all the time?
+* Which customer segment is the most profitable for all the time?
+* What is year over year Sales growth of customer segments for the latest year?
+* What is year over year Profit growth of customer segments for the latest year?
+* Which customer segment makes more losses for all the time?
+* What is year over year losses growth of customer segment for the lateast year?
+
+
+```{r total-pivottable-segment}
+
+# total pivot table by segment
+total_pivottable_segment <- Orders %>%
+  group_by(`Order ID`) %>%
+  summarise(Sales = sum(Sales), Profit = sum(Profit), Segment = first(Segment), `Customer ID` = first(`Customer ID`)) %>%
+  ungroup() %>%
+  group_by(Segment) %>%
+  summarise(Sales = sum(Sales), Profit = sum(Profit), `# of Orders` = n_distinct(`Order ID`), `# of Customers` = n_distinct(`Customer ID`)) %>%
+  ungroup() %>%
+  arrange(-Profit)
+
+```
+
+
+```{r total-segment-plotsm, fig.show="hold", out.width="50%"}
+
+# total sales
+total_pivottable_segment %>%
+  ggplot(aes(x = Segment, y = Sales, fill = Segment)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(x = Segment, y = Sales, label = scales::dollar(Sales, accuracy = 1L, scale = 1e-3, suffix = "K")), 
+            vjust = -1, size = 4) +
+  scale_y_continuous(labels = scales::label_number(accuracy = 1L, scale = 1e-3, suffix = "K"), limits = c(0, 1250e3), breaks = seq(0, 1250e3, 250e3)) +
+  scale_fill_brewer(palette="Greens") +
+  labs(title = "Total Sales", x = "Segment", y = "Sales, $") 
+
+# totaL profit
+total_pivottable_segment %>%
+  ggplot(aes(x = Segment, y = Profit, fill = Segment)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(x = Segment, y = Profit, label = scales::dollar(Profit, accuracy = 1L, scale = 1e-3, suffix = "K")), 
+            vjust = -1, size = 4) +
+  scale_y_continuous(labels = scales::label_number(accuracy = 1L, scale = 1e-3, suffix = "K"), limits = c(0, 160e3)) +
+  scale_fill_brewer(palette="Greens") +
+  labs(title = "Total Profit", x = "Segment", y = "Profit, $") 
+
+# total # of orders
+total_pivottable_segment %>%
+  ggplot(aes(x = Segment, y = `# of Orders`, fill = Segment)) +
+  geom_col(show.legend = FALSE) +
+  geom_text(aes(x = Segment, y = `# of Orders`, label = `# of Orders`), vjust = -1, size = 4) +
+  scale_y_continuous(labels = scales::label_number(), limits = c(0, 3e3)) +
+  scale_x_discrete(guide = guide_axis(angle = 45)) + 
+  scale_fill_brewer(palette="Greens") +
+  labs(title = "Total # of Orders", x = "Segment", y = "# of Orders") 
+
+```
+
+
+```{r viz-total-pivottable-segment}
+
+# total pivot table viz
+total_pivottable_segment %>%
+  mutate_at(c(2, 3), ~scales::dollar(., accuracy = 1L)) %>%
+kbl(col.names = c("Customer Segment", "Sales", "Profit", "# of Orders", "# of Customers"),
+             caption = "Total metrics by Customer Segment for all the time.",
+    escape = F,
+    align = c("l", rep('r',times=4))) %>%
+kable_styling(bootstrap_options = c("striped", "bordered"), full_width = TRUE) %>%
+row_spec(0, align = "c")
+
+```
+
+
+### What are sizes of Customer Segments?
+
+```{r segment-sizem, fig.show="hold", out.width="50%"}
+
+total_pivottable_segment %>%
+  ggplot(aes(x = 0, y=`# of Customers`, fill=Segment)) +
+  geom_bar(stat="identity") +
+  geom_text(aes(label=scales::percent(`# of Customers`/sum(`# of Customers`), accuracy = 0.1)),
+            position = position_stack(vjust = 0.5)) +
+  scale_fill_brewer(palette="Greens") +
+  labs(title = "% of Total Customers by Segment", x = "", y = "") +
+  scale_y_continuous(labels = scales::label_percent()) +
+  coord_polar(theta = "y") +
+  theme(legend.title = element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        panel.grid  = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.border = element_blank())
+
+total_pivottable_segment %>%
+  ggplot(aes(x = 0, y=`# of Orders`, fill=Segment)) +
+  geom_bar(stat="identity") +
+  geom_text(aes(label=scales::percent(`# of Orders`/sum(`# of Orders`), accuracy = 0.1)),
+            position = position_stack(vjust = 0.5)) +
+  scale_fill_brewer(palette="Greens") +
+  labs(title = "% of Total Orders by Segment", x = "", y = "") +
+  scale_y_continuous(labels = scales::label_percent()) +
+  coord_polar(theta = "y") +
+  theme(legend.title = element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        panel.grid  = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.border = element_blank())
+
+```
+
+
+### Losses
+
+```{r segment-losses}
+
+# losses segment
+Orders %>%
+  group_by(`Order ID`) %>%
+  summarise(Profit = sum(Profit), Segment = first(Segment)) %>%
+  group_by(Segment) %>%
+  summarise(perc_losses = n_distinct(`Order ID`[Profit < 0])/n(),
+            losses_count = n_distinct(`Order ID`[Profit < 0]),
+            total_count = n()) %>%
+  ggplot(aes(x = 0, y=perc_losses, fill=Segment)) +
+  geom_bar(stat="identity") +
+  geom_text(aes(label=scales::percent(perc_losses)),
+            position = position_stack(vjust = 0.5)) +
+  scale_fill_brewer(palette="Greens") +
+  labs(title = "Number of Losable Orders", x = "", y = "",
+       subtitle = bquote("All the Customer Segments have "~bold("almost the same")~" percentage of lossable orders.")) +
+  scale_y_continuous(labels = scales::label_percent()) +
+  coord_polar(theta = "y") +
+  theme(legend.title = element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank(),
+        panel.grid  = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.border = element_blank())
+
+```
+
+
+These plots appear total metrics. Let's build a table with year over year growth of sales and profit.
+
+### What are YoY Growth Sales and Profit by Customer Segment?
+
+
+```{r yoy-segment}
+
+YoY_seg <- Orders %>%
+  mutate(Year = year(`Order Date`)) %>%
+  group_by(Segment, Year) %>%
+  summarise(Sales = round(sum(Sales), 2), 
+            Profit = round(sum(Profit), 2)) %>%
+  mutate(YoY_Growth_Sales = (Sales - lag(Sales))/lag(Sales),
+         YoY_Growth_Profit = (Profit - lag(Profit))/abs(lag(Profit))) 
+
+YoY_segment <- YoY_seg %>%
+  pivot_wider(names_from = "Year", values_from = c("Sales", "Profit", "YoY_Growth_Sales", "YoY_Growth_Profit"))
+
+sales_profit_columns <- YoY_segment %>% ungroup() %>% select(starts_with(c("Sales", "Profit"))) %>% colnames()
+
+```
+
+``` {r yoy-segment-table}
+
+YoY_segment %>% 
+  select(all_of(sales_profit_columns)) %>%
+  mutate_at(sales_profit_columns, ~scales::dollar(., accuracy = 1L)) %>%
+kbl(col.names = c("Customer Segment", as.character(2014:2017), as.character(2014:2017)),
+             caption = "Sales and Profit by Customer Segment",
+    escape = F,
+    align = c("l", rep('r',times=8))) %>%
+  kable_styling(bootstrap_options = c("striped", "bordered"), full_width = TRUE) %>%
+row_spec(0, align = "c") %>%
+add_header_above(header = c(" " = 1, "Sales" = 4, "Profit" = 4), bold = TRUE, border_left = TRUE, border_right = TRUE)
+
+```
+
+
+```{r pivot-table-segment}
+
+yoy_growth_columns <- YoY_segment %>% ungroup() %>% select(starts_with("YoY_")) %>% colnames()
+
+YoY_segment %>% select(yoy_growth_columns) %>%
+  mutate_if(is.numeric, ~cell_spec(scales::percent(., accuracy = 0.1), "html", color=case_when(. < 0 ~ "red",
+                                                   . >= 0 ~ "green",
+                                                   is.na(.) ~ "lightgray",
+                                                   TRUE ~ "black"))) %>%
+kbl(col.names = c("Customer Segment", as.character(2014:2017), as.character(2014:2017)),
+             caption = "Year over the year Sales and Profit growth by Customer Segment",
+    escape = F,
+    align = c("l", rep('r',times=8))) %>%
+row_spec(0, align = "c") %>%
+kable_styling(bootstrap_options = c("striped", "bordered"), full_width = TRUE) %>%
+add_header_above(header = c("", "YoY Sales Growth" = 4, "YoY Profit Growth" = 4), bold = TRUE, border_left = TRUE, border_right = TRUE)
+
+```
+
+
+```{r yoy-segment-plot}
+
+scale <- max(YoY_seg$Sales)
+YoY_seg %>%
+  ggplot() +
+   geom_col(aes(x=Year, y=Sales, fill=Segment)) +
+    geom_line(aes(x = Year, y = YoY_Growth_Sales * max(YoY_seg$Sales[YoY_seg$Segment == Segment]), group = Segment, color="YoY Growth"), size = 0.75) + 
+    geom_point(aes(x = Year, y = YoY_Growth_Sales * max(YoY_seg$Sales[YoY_seg$Segment == Segment]), group = Segment, color="YoY Growth"), size = 3) + 
+    geom_point(aes(x = Year, y = YoY_Growth_Sales * max(YoY_seg$Sales[YoY_seg$Segment == Segment]), group = Segment, color="YoY Growth"), shape=21, fill = "white", size = 2) + 
+    geom_text(aes(x = Year, y = YoY_Growth_Sales * max(YoY_seg$Sales[YoY_seg$Segment == Segment]), 
+                  label = scales::percent(YoY_Growth_Sales, accuracy=0.1),
+                  vjust = ifelse(YoY_Growth_Sales < 0, 2, -1.5)), size = 4, color = "black") +
+   labs(title = "YoY Sales Growth by Customer Segment", x = "Customer Segment", y = "Sales, $") +
+   scale_y_continuous(sec.axis = sec_axis(trans = ~./scale, name = "", labels = scales::label_percent(), breaks = seq(0, 1, 0.2)), 
+                      labels = scales::number(seq(0, 350e3, by=50e3), scale = 1e-3, suffix = "K"), limits = c(-100e3, 350e3),
+                      breaks = seq(0, 350e3, by=50e3)) +
+  scale_colour_manual(name = "", values=c("YoY Growth"="black")) +
+    scale_fill_brewer(palette="Greens") +
+  facet_wrap(.~Segment) +
+  theme(legend.position = "bottom", legend.title = element_blank(),
+        strip.background = element_blank(),
+        strip.text = element_text(color = "black", face = "bold"))
+
+```
+
+
+```{r yoy-profit-segment}
+
+scale <- max(YoY_seg$Profit)
+YoY_seg %>%
+  ggplot() +
+   geom_col(aes(x=Year, y=Profit, fill=Segment)) +
+    geom_line(aes(x = Year, y = YoY_Growth_Profit * max(YoY_seg$Profit[YoY_seg$Segment == Segment]), group = Segment, color="YoY Growth"), size = 0.75) + 
+    geom_point(aes(x = Year, y = YoY_Growth_Profit * max(YoY_seg$Profit[YoY_seg$Segment == Segment]), group = Segment, color="YoY Growth"), size = 3) + 
+    geom_point(aes(x = Year, y = YoY_Growth_Profit * max(YoY_seg$Profit[YoY_seg$Segment == Segment]), group = Segment, color="YoY Growth"), shape=21, fill = "white", size = 2) + 
+    geom_text(aes(x = Year, y = YoY_Growth_Profit * max(YoY_seg$Profit[YoY_seg$Segment == Segment]), 
+                  label = scales::percent(YoY_Growth_Profit, accuracy=1L),
+                  vjust = ifelse(YoY_Growth_Profit < 0, 2, -1.5)), size = 4, color = "black") +
+   labs(title = "YoY Profit Growth by Customer Segment", x = "Customer Segment", y = "Profit, $") +
+   scale_y_continuous(sec.axis = sec_axis(trans = ~./scale, name = "", labels = scales::label_percent(), breaks = seq(0, 1, 0.2)), 
+                      labels = scales::number(seq(0, 50e3, by=10e3), scale = 1e-3, suffix = "K"), limits = c(-10e3, 50e3),
+                      breaks = seq(0, 50e3, by=10e3)) +
+    scale_fill_brewer(palette="Greens") +
+  scale_colour_manual(name = "", values=c("YoY Growth"="black")) +
+  facet_wrap(.~Segment) +
+  theme(legend.position = "bottom", legend.title = element_blank(),
+        strip.background = element_blank(),
+        strip.text = element_text(color = "black", face = "bold"))
+
+```
+
+## Correlation
+
+``` {r correlations}
+
+df <- data.frame(Orders %>% select_if(is.numeric))
+
+# correlations
+cor(df)
+
+l <- length(unique(Orders$Segment))
+
+# plot correlations
+pairs(df,       
+      pch = 19, 
+      col = hcl.colors(l, "Temps")[Orders$Segment],
+      main = "Correlations",   
+      gap = 0,     
+      row1attop = FALSE, 
+      labels = colnames(df), 
+      cex.labels = 0.8,  
+      font.labels = 1) 
+
+```
+
+### How Sales affect Profit?
+
+```{r sales-profit-correlation}
+
+Orders %>%
+  ggplot() +
+  geom_hline(yintercept = 0, color = "darkgray", size=0.25) +
+  geom_point(aes(x=Sales, y=Profit), color="#4BA15D", shape=21, fill="#ADD7A0", alpha=0.5) +
+  scale_x_continuous(labels = scales::label_number(scale = 1e-3, suffix = "K", accuracy = 1L),
+                     limits = c(0, 25e3), breaks = seq(0, 25e3, 2.5e3)) +
+  scale_y_continuous(labels = scales::label_number(scale = 1e-3, suffix = "K", accuracy = 1L),
+                     limits = c(-7e3, 9e3), breaks = seq(-7e3, 9e3, 1e3)) +
+  labs(title = "Sales and Profit correlation", x = "Sales, $", y="Profit, $")
+
+```
+
+### How discount affects sales and profit?
+
+```{r discount-affect}
+
+Orders %>%
+  ggplot(aes(x=Discount, y=Sales)) +
+  geom_point(aes(color=Segment), alpha=0.5, position = position_jitter()) +
+  scale_x_continuous(labels = scales::label_percent(), breaks = seq(0, 0.8, 0.1)) +
+  scale_y_continuous(labels = scales::label_number(scale = 1e-3, suffix = "K", accuracy = 1L),
+                     limits = c(0, 25e3), breaks = seq(0, 25e3, 5e3)) +
+  labs(title = "Discount and Sales correlation by Customer Segment", x = "Discount", y="Sales, $") +
+  theme(legend.position="none",
+        strip.background = element_blank(),
+        strip.text = element_text(color = "black", face = "bold")) +
+  facet_wrap(~Segment, ncol = 1)
+
+Orders %>%
+  ggplot(aes(x=Discount, y=Profit)) +
+  geom_point(aes(color=Segment), alpha=0.5, position = position_jitter()) +
+  scale_x_continuous(labels = scales::label_percent(), breaks = seq(0, 0.8, 0.1)) +
+  scale_y_continuous(labels = scales::label_number(scale = 1e-3, suffix = "K", accuracy = 1L),
+                     limits = c(-7e3, 9e3), breaks = seq(-7e3, 9e3, 2e3)) +
+  labs(title = "Discount and Profit correlation by Customer Segment", x = "Discount", y="Profit, $") +
+  theme(legend.position="none",
+        strip.background = element_blank(),
+        strip.text = element_text(color = "black", face = "bold")) +
+  facet_wrap(~Segment, ncol = 1)
+
+```
+
+
+
