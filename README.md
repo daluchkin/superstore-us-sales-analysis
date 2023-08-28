@@ -112,17 +112,17 @@ Dataset is located in Kaggle and named as [Superstore Dataset](https://www.kaggl
 
 > **_IMPORTANT:_** Full analysis available in [this report](https://daluchkin.github.io/superstore-us-sales-analysis/).
 
-![alt text](https://github.com/daluchkin/superstore-eu-sales-analysis/blob/main/img/img01.png?raw=true)
+![alt text](https://github.com/daluchkin/superstore-us-sales-analysis/blob/main/img/img01.png?raw=true)
 
-![alt text](https://github.com/daluchkin/superstore-eu-sales-analysis/blob/main/img/img01.png?raw=true)
+![alt text](https://github.com/daluchkin/superstore-us-sales-analysis/blob/main/img/img01.png?raw=true)
 
-![alt text](https://github.com/daluchkin/superstore-eu-sales-analysis/blob/main/img/img01.png?raw=true)
+![alt text](https://github.com/daluchkin/superstore-us-sales-analysis/blob/main/img/img01.png?raw=true)
 
-![alt text](https://github.com/daluchkin/superstore-eu-sales-analysis/blob/main/img/img01.png?raw=true)
+![alt text](https://github.com/daluchkin/superstore-us-sales-analysis/blob/main/img/img01.png?raw=true)
 
-![alt text](https://github.com/daluchkin/superstore-eu-sales-analysis/blob/main/img/img01.png?raw=true)
+![alt text](https://github.com/daluchkin/superstore-us-sales-analysis/blob/main/img/img01.png?raw=true)
 
-![alt text](https://github.com/daluchkin/superstore-eu-sales-analysis/blob/main/img/img01.png?raw=true)
+![alt text](https://github.com/daluchkin/superstore-us-sales-analysis/blob/main/img/img01.png?raw=true)
 
 
 
